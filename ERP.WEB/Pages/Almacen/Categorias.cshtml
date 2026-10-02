@@ -1,0 +1,367 @@
+﻿@page
+@model ERP.WEB.Pages.Almacen.CategoriasModel
+@{
+    ViewData["Title"] = "Gestión de Categorías y SubCategorías";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold text-dark mb-0"><i class="bi bi-folder-symlink me-2 text-primary"></i>Categorías y SubCategorías</h4>
+        <small class="text-muted">Administración de la clasificación del catálogo de artículos</small>
+    </div>
+    <button class="btn btn-primary fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalCategoria" onclick="limpiarModalCategoria()">
+        <i class="bi bi-plus-lg me-1"></i> Nueva Categoría
+    </button>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+    <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-check-circle me-1"></i> @Model.MensajeExito
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i> @Model.MensajeError
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="row g-4">
+    <!-- PANEL IZQUIERDO: CATEGORÍAS -->
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold text-dark mb-0"><i class="bi bi-grid-fill me-2 text-warning"></i>Categorías</h6>
+                <span class="badge bg-secondary">Total: @Model.ListaCategorias.Count</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="tablaCategorias">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th class="text-center">Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var cat in Model.ListaCategorias)
+                            {
+                                bool esSeleccionado = Model.CategoriaSeleccionadaID == cat.CategoriaID;
+                                <tr id="trCat_@cat.CategoriaID" class="fila-categoria @(esSeleccionado ? "table-primary fw-bold" : "")" style="cursor: pointer;" onclick="seleccionarCategoria(@cat.CategoriaID, '@cat.Nombre')">
+                                    <td><code>@cat.Codigo</code></td>
+                                    <td>
+                                        <span class="text-dark d-block fw-semibold">@cat.Nombre</span>
+                                    </td>
+                                    <td class="text-center">
+                                        @if (cat.Estado)
+                                        {
+                                            <span class="badge bg-success">Activo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Inactivo</span>
+                                        }
+                                    </td>
+                                    <td class="text-end" onclick="event.stopPropagation();">
+                                        <button class="btn btn-sm btn-outline-info me-1" onclick="seleccionarCategoria(@cat.CategoriaID, '@cat.Nombre')" title="Ver SubCategorías">
+                                            <i class="bi bi-arrow-right-short fs-6"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editarCategoria(@cat.CategoriaID, '@cat.Codigo', '@cat.Nombre', '@cat.Descripcion', @cat.Estado.ToString().ToLower())" data-bs-toggle="modal" data-bs-target="#modalCategoria">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANEL DERECHO: SUBCATEGORÍAS -->
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold text-dark mb-0">
+                    <i class="bi bi-diagram-2 me-2 text-info"></i>SubCategorías
+                    <span id="lblCategoriaSeleccionada" class="text-primary fs-7">
+                        @(Model.CategoriaSeleccionadaID.HasValue ? $"({Model.ListaCategorias.FirstOrDefault(c => c.CategoriaID == Model.CategoriaSeleccionadaID.Value)?.Nombre})" : "")
+                    </span>
+                </h6>
+                <div id="contenedorBtnNuevaSubCat" style="display: @(Model.CategoriaSeleccionadaID.HasValue ? "block" : "none");">
+                    <button class="btn btn-sm btn-success fw-semibold" data-bs-toggle="modal" data-bs-target="#modalSubCategoria" onclick="limpiarModalSubCategoria()">
+                        <i class="bi bi-plus-lg me-1"></i> Nueva SubCategoría
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0" id="contenedorSubCategorias">
+                @if (!Model.CategoriaSeleccionadaID.HasValue)
+                {
+                    <div class="text-center py-5 text-muted" id="msgSeleccionarCat">
+                        <i class="bi bi-hand-index-thumb fs-2 d-block text-primary mb-2"></i>
+                        <span>Seleccione una Categoría del panel izquierdo para ver y gestionar sus SubCategorías.</span>
+                    </div>
+                }
+                else
+                {
+                    <!-- La tabla se renderiza vía JS o al cargar por GET -->
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="tablaSubCategorias">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Nombre</th>
+                                    <th class="text-center">Estado</th>
+                                    <th class="text-end">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodySubCategorias">
+                                @foreach (var subCat in Model.ListaSubCategorias)
+                                {
+                                    <tr>
+                                        <td><code>@subCat.Codigo</code></td>
+                                        <td class="fw-semibold text-dark">@subCat.Nombre</td>
+                                        <td class="text-center">
+                                            @if (subCat.Estado)
+                                            {
+                                                <span class="badge bg-success">Activo</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Inactivo</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="editarSubCategoria(@subCat.SubCategoriaID, @subCat.CategoriaID, '@subCat.Codigo', '@subCat.Nombre', @subCat.Estado.ToString().ToLower())" data-bs-toggle="modal" data-bs-target="#modalSubCategoria">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR/EDITAR CATEGORÍA -->
+<div class="modal fade" id="modalCategoria" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold" id="modalCatTitle"><i class="bi bi-folder-plus me-2"></i> Categoría</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" asp-page-handler="GuardarCategoria">
+                <div class="modal-body">
+                    <input type="hidden" asp-for="InputCategoria.CategoriaID" id="txtCatID" value="0" />
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Código Prefijo (Autogenerado) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="text" class="form-control bg-light fw-bold text-primary" asp-for="InputCategoria.Codigo" id="txtCatCodigo" maxlength="10" readonly required />
+                            <span class="input-group-text bg-light"><i class="bi bi-lock-fill text-muted"></i></span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nombre de la Categoría <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" asp-for="InputCategoria.Nombre" id="txtCatNombre" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Descripción</label>
+                        <textarea class="form-control" asp-for="InputCategoria.Descripcion" id="txtCatDesc" rows="2"></textarea>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" asp-for="InputCategoria.Estado" id="chkCatEstado" checked>
+                        <label class="form-check-label fw-semibold" for="chkCatEstado">Categoría Activa</label>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary fw-semibold"><i class="bi bi-save me-1"></i> Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR/EDITAR SUBCATEGORÍA -->
+<div class="modal fade" id="modalSubCategoria" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold" id="modalSubCatTitle"><i class="bi bi-diagram-2 me-2"></i> SubCategoría</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" asp-page-handler="GuardarSubCategoria">
+                <div class="modal-body">
+                    <input type="hidden" asp-for="InputSubCategoria.SubCategoriaID" id="txtSubCatID" value="0" />
+                    <input type="hidden" asp-for="InputSubCategoria.CategoriaID" id="txtSubCatCategoriaID" />
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Código Prefijo (Autogenerado) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="text" class="form-control bg-light fw-bold text-success" asp-for="InputSubCategoria.Codigo" id="txtSubCatCodigo" maxlength="10" readonly required />
+                            <span class="input-group-text bg-light"><i class="bi bi-lock-fill text-muted"></i></span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nombre de la SubCategoría <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" asp-for="InputSubCategoria.Nombre" id="txtSubCatNombre" required />
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" asp-for="InputSubCategoria.Estado" id="chkSubCatEstado" checked>
+                        <label class="form-check-label fw-semibold" for="chkSubCatEstado">SubCategoría Activa</label>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success fw-semibold"><i class="bi bi-save me-1"></i> Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let categoriaActivaID = @(Model.CategoriaSeleccionadaID.HasValue? Model.CategoriaSeleccionadaID.Value : 0);
+
+        // SELECCIÓN ASÍNCRONA DE CATEGORÍA (Sin recargar la barra lateral ni la página)
+        async function seleccionarCategoria(categoriaId, nombreCategoria) {
+            categoriaActivaID = categoriaId;
+
+            // 1. Resaltar la fila seleccionada en el panel izquierdo
+            document.querySelectorAll('.fila-categoria').forEach(tr => {
+                tr.classList.remove('table-primary', 'fw-bold');
+            });
+            const trActivo = document.getElementById(`trCat_${categoriaId}`);
+            if (trActivo) trActivo.classList.add('table-primary', 'fw-bold');
+
+            // 2. Actualizar encabezado y mostrar botón "Nueva SubCategoría"
+            document.getElementById('lblCategoriaSeleccionada').innerText = `(${nombreCategoria})`;
+            document.getElementById('contenedorBtnNuevaSubCat').style.display = 'block';
+
+            // 3. Consultar subcategorías vía AJAX
+            try {
+                const response = await fetch(`?handler=ObtenerSubCategorias&categoriaId=${categoriaId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    renderizarTablaSubCategorias(data, categoriaId);
+                }
+            } catch (error) {
+                console.error("Error al cargar subcategorías:", error);
+            }
+        }
+
+        function renderizarTablaSubCategorias(listaSubCat, categoriaId) {
+            const contenedor = document.getElementById('contenedorSubCategorias');
+
+            if (!listaSubCat || listaSubCat.length === 0) {
+                contenedor.innerHTML = `
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                        <span>No existen SubCategorías registradas para esta Categoría.</span>
+                    </div>`;
+                return;
+            }
+
+            let html = `
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th class="text-center">Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+            listaSubCat.forEach(subCat => {
+                const badgeEstado = subCat.estado
+                    ? '<span class="badge bg-success">Activo</span>'
+                    : '<span class="badge bg-secondary">Inactivo</span>';
+
+                html += `
+                    <tr>
+                        <td><code>${subCat.codigo ?? ''}</code></td>
+                        <td class="fw-semibold text-dark">${subCat.nombre}</td>
+                        <td class="text-center">${badgeEstado}</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary" onclick="editarSubCategoria(${subCat.subCategoriaID}, ${categoriaId}, '${subCat.codigo ?? ''}', '${subCat.nombre}', ${subCat.estado})" data-bs-toggle="modal" data-bs-target="#modalSubCategoria">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+            });
+
+            html += `</tbody></table></div>`;
+            contenedor.innerHTML = html;
+        }
+
+        async function limpiarModalCategoria() {
+            document.getElementById('modalCatTitle').innerText = "Nueva Categoría";
+            document.getElementById('txtCatID').value = "0";
+            document.getElementById('txtCatNombre').value = "";
+            document.getElementById('txtCatDesc').value = "";
+            document.getElementById('chkCatEstado').checked = true;
+
+            try {
+                const response = await fetch('?handler=SiguienteCodigoCategoria');
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('txtCatCodigo').value = data.codigo;
+                }
+            } catch (e) {
+                console.error("Error obteniendo prefijo de categoría:", e);
+            }
+        }
+
+        function editarCategoria(id, codigo, nombre, desc, estado) {
+            document.getElementById('modalCatTitle').innerText = "Editar Categoría";
+            document.getElementById('txtCatID').value = id;
+            document.getElementById('txtCatCodigo').value = codigo;
+            document.getElementById('txtCatNombre').value = nombre;
+            document.getElementById('txtCatDesc').value = desc;
+            document.getElementById('chkCatEstado').checked = estado;
+        }
+
+        async function limpiarModalSubCategoria() {
+            document.getElementById('modalSubCatTitle').innerText = "Nueva SubCategoría";
+            document.getElementById('txtSubCatID').value = "0";
+            document.getElementById('txtSubCatCategoriaID').value = categoriaActivaID;
+            document.getElementById('txtSubCatNombre').value = "";
+            document.getElementById('chkSubCatEstado').checked = true;
+
+            try {
+                const response = await fetch(`?handler=SiguienteCodigoSubCategoria&categoriaId=${categoriaActivaID}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('txtSubCatCodigo').value = data.codigo;
+                }
+            } catch (e) {
+                console.error("Error obteniendo prefijo de subcategoría:", e);
+            }
+        }
+
+        function editarSubCategoria(id, categoriaId, codigo, nombre, estado) {
+            document.getElementById('modalSubCatTitle').innerText = "Editar SubCategoría";
+            document.getElementById('txtSubCatID').value = id;
+            document.getElementById('txtSubCatCategoriaID').value = categoriaId;
+            document.getElementById('txtSubCatCodigo').value = codigo;
+            document.getElementById('txtSubCatNombre').value = nombre;
+            document.getElementById('chkSubCatEstado').checked = estado;
+        }
+    </script>
+}

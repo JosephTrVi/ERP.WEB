@@ -1,0 +1,113 @@
+﻿@page
+@model ERP.WEB.Pages.Seguridad.UsuariosModel
+@{
+    ViewData["Title"] = "Gestión de Usuarios";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h3 class="fw-bold text-dark mb-0"><i class="bi bi-people me-2"></i>Gestión de Usuarios</h3>
+        <small class="text-muted">Administración de accesos de usuarios al sistema ERP</small>
+    </div>
+    <button class="btn btn-primary fw-bold" data-bs-toggle="modal" data-bs-target="#modalNuevoUsuario">
+        <i class="bi bi-person-plus me-1"></i> Nuevo Usuario
+    </button>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle me-1"></i> @Model.MensajeExito
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Usuario</th>
+                    <th>Nombres y Apellidos</th>
+                    <th>Email</th>
+                    <th>Estado</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.ListaUsuarios)
+                {
+                    <tr>
+                        <td class="fw-bold">@item.Username</td>
+                        <td>@(item.Empleado != null ? item.Empleado.NombreCompleto : "Sin Empleado Asignado")</td>
+                        <td>@(item.Empleado?.CorreoInstitucional ?? item.Empleado?.CorreoPersonal ?? "Sin correo")</td>
+                        <td>@(item.Rol?.NombreRol ?? "Sin Rol")</td>
+                        <td>
+                            @if (item.Estado)
+                            {
+                                <span class="badge bg-success">Activo</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Inactivo</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil"></i></button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal para Registro de Usuario -->
+<div class="modal fade" id="modalNuevoUsuario" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="bi bi-person-plus me-2"></i>Registrar Nuevo Usuario</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" asp-page-handler="Crear">
+                <div class="modal-body">
+                    <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+                    <div class="mb-3">
+                        <label asp-for="NuevoUsuario.UserName" class="form-label small fw-bold"></label>
+                        <input asp-for="NuevoUsuario.UserName" class="form-control" placeholder="Ej: jperez" />
+                        <span asp-validation-for="NuevoUsuario.UserName" class="text-danger small"></span>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="NuevoUsuario.Nombres" class="form-label small fw-bold"></label>
+                            <input asp-for="NuevoUsuario.Nombres" class="form-control" placeholder="Juan" />
+                            <span asp-validation-for="NuevoUsuario.Nombres" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="NuevoUsuario.Apellidos" class="form-label small fw-bold"></label>
+                            <input asp-for="NuevoUsuario.Apellidos" class="form-control" placeholder="Pérez" />
+                            <span asp-validation-for="NuevoUsuario.Apellidos" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="NuevoUsuario.Email" class="form-label small fw-bold"></label>
+                        <input asp-for="NuevoUsuario.Email" type="email" class="form-control" placeholder="juan.perez@empresa.com" />
+                        <span asp-validation-for="NuevoUsuario.Email" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="NuevoUsuario.Password" class="form-label small fw-bold"></label>
+                        <input asp-for="NuevoUsuario.Password" class="form-control" placeholder="******" />
+                        <span asp-validation-for="NuevoUsuario.Password" class="text-danger small"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary btn-sm fw-bold">
+                        <i class="bi bi-save me-1"></i> Guardar Usuario
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

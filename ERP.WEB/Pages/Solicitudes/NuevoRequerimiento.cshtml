@@ -1,0 +1,483 @@
+﻿@page
+@model ERP.WEB.Pages.Solicitudes.NuevoRequerimientoModel
+@{
+    ViewData["Title"] = "Nuevo Requerimiento de Compra / Servicio";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold text-dark mb-0"><i class="bi bi-file-earmark-plus me-2 text-primary"></i>Nuevo Requerimiento</h4>
+        <small class="text-muted">Registro de solicitudes internas de compras nacionales, importaciones y servicios</small>
+    </div>
+    <a asp-page="/Index" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Regresar
+    </a>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i> @Model.MensajeError
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<form method="post" asp-page-handler="Guardar" id="formRequerimiento">
+    <input type="hidden" asp-for="ItemsJson" id="txtItemsJson" />
+
+    <!-- CABECERA DEL REQUERIMIENTO -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-dark text-white py-2">
+            <h6 class="mb-0 fw-bold"><i class="bi bi-info-circle me-2"></i>Datos Generales de la Solicitud</h6>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">Código</label>
+                    <input type="text" class="form-control bg-light fw-bold text-primary" asp-for="InputRequerimiento.Codigo" readonly />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">Tipo Requerimiento <span class="text-danger">*</span></label>
+                    <select class="form-select fw-semibold" asp-for="InputRequerimiento.TipoRequerimiento" id="ddlTipoReq" required>
+                        <option value="Nacional">📦 Compras Nacionales</option>
+                        <option value="Importacion">🚢 Compras Internacionales (Importación)</option>
+                        <option value="Servicio">🛠️ Servicios / Mantenimiento</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">Prioridad <span class="text-danger">*</span></label>
+                    <select class="form-select" asp-for="InputRequerimiento.Prioridad" required>
+                        <option value="Baja">Baja</option>
+                        <option value="Normal" selected>Normal</option>
+                        <option value="Alta">Alta</option>
+                        <option value="Urgente">Urgente</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">Área / Centro de Costos</label>
+                    <select class="form-select" asp-for="InputRequerimiento.AreaID">
+                        <option value="">-- Seleccionar Área --</option>
+                        <option value="1">Mantenimiento de Planta</option>
+                        <option value="2">Producción y Operaciones</option>
+                        <option value="3">Almacén e Inventarios</option>
+                        <option value="4">Control de Calidad</option>
+                        <option value="5">Administración y Finanzas</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">Fecha Requerida <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" asp-for="InputRequerimiento.FechaRequerida" required />
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Observaciones / Sustento</label>
+                    <textarea class="form-control" asp-for="InputRequerimiento.Observaciones" rows="2" placeholder="Describa el motivo o destino de este requerimiento..."></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DETALLE DE ARTÍCULOS Y SERVICIOS -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
+            <h6 class="fw-bold text-dark mb-0"><i class="bi bi-list-check me-2 text-success"></i>Artículos / Servicios Solicitados</h6>
+            <button type="button" class="btn btn-primary btn-sm fw-semibold shadow-sm" onclick="abrirBuscadorArticulos()">
+                <i class="bi bi-search me-1"></i> Agregar Artículos / Servicios
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="tablaDetalle">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 120px;">SKU</th>
+                            <th>Descripción / Artículo</th>
+                            <th>Categoría / SubCat</th>
+                            <th>U.M.</th>
+                            <th style="width: 140px;" class="text-end">Cantidad <span class="text-danger">*</span></th>
+                            <th>Especificaciones Técnicas</th>
+                            <th style="width: 60px;" class="text-center">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyDetalle">
+                        <tr id="trVacio">
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-cart-x fs-2 d-block mb-2 text-secondary"></i>
+                                <span>No se han agregado artículos al requerimiento. Presione <strong>"Agregar Artículos / Servicios"</strong>.</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2">
+        <a asp-page="/Index" class="btn btn-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-success fw-semibold px-4"><i class="bi bi-save me-1"></i> Registrar Requerimiento</button>
+    </div>
+</form>
+
+<!-- MODAL BUSCADOR DE ARTÍCULOS / SERVICIOS -->
+<div class="modal fade" id="modalBuscarArticulos" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-search me-2"></i> Buscar Artículos en Catálogo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <!-- BARRA DE FILTROS -->
+                <div class="row g-2 mb-3 bg-white p-3 rounded-3 shadow-sm align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">Categoría</label>
+                        <select class="form-select form-select-sm" id="ddlCatModalBusqueda" asp-items="Model.SelectCategorias" onchange="cargarSubCatsBusqueda(this.value)">
+                            <option value="">-- Todas las Categorías --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold small text-muted mb-1">SubCategoría</label>
+                        <select class="form-select form-select-sm" id="ddlSubCatModalBusqueda">
+                            <option value="">-- Todas las SubCategorías --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold small text-muted mb-1">Código / Descripción</label>
+                        <input type="text" class="form-control form-control-sm" id="txtTextoBusqueda" placeholder="Buscar por SKU o Nombre..." />
+                    </div>
+                    <div class="col-md-2 d-flex gap-1">
+                        <button type="button" class="btn btn-primary btn-sm w-100 fw-semibold" onclick="ejecutarBusquedaArticulos()">
+                            <i class="bi bi-funnel me-1"></i> Filtrar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TABLA DE RESULTADOS DE BÚSQUEDA -->
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-0" style="max-height: 320px; overflow-y: auto;">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th>SKU</th>
+                                    <th>Artículo / Servicio</th>
+                                    <th>Categoría / SubCat</th>
+                                    <th>U.M.</th>
+                                    <th class="text-end">Stock Actual</th>
+                                    <th class="text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyResultadosBusqueda">
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">
+                                        Seleccione un filtro o ingrese un código y haga clic en <strong>Filtrar</strong>.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ALERTA Y BOTÓN DE CREAR ARTÍCULO EXPRESS -->
+                <div class="alert alert-warning mt-3 mb-0 d-flex justify-content-between align-items-center shadow-sm">
+                    <div>
+                        <i class="bi bi-question-circle-fill me-2 fs-5 text-warning"></i>
+                        <span>¿No encuentra el artículo o servicio que necesita solicitar?</span>
+                    </div>
+                    <button type="button" class="btn btn-outline-dark btn-sm fw-semibold" onclick="abrirModalCrearExpress()">
+                        <i class="bi bi-plus-circle me-1"></i> Crear Nuevo Artículo
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer bg-white">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EXPRESS CREAR ARTÍCULO -->
+<div class="modal fade" id="modalCrearExpress" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-box-seam me-2"></i> Crear Artículo On-the-Fly</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formArticuloExpress">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Categoría <span class="text-danger">*</span></label>
+                            <select class="form-select" id="ddlCatExpress" asp-items="Model.SelectCategorias" onchange="cargarSubCatsExpress(this.value)" required>
+                                <option value="">-- Seleccionar --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">SubCategoría <span class="text-danger">*</span></label>
+                            <select class="form-select" id="ddlSubCatExpress" onchange="generarCodigoExpress()" required>
+                                <option value="">-- Seleccionar Categoría primero --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">SKU Autogenerado</label>
+                            <input type="text" class="form-control bg-light fw-bold text-primary" id="txtSKUExpress" readonly required />
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">Nombre del Artículo <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="txtNombreExpress" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Unidad Medida</label>
+                            <select class="form-select" id="ddlUMExpress">
+                                <option value="UND">Unidades (UND)</option>
+                                <option value="KGR">Kilogramos (KGR)</option>
+                                <option value="MTR">Metros (MTR)</option>
+                                <option value="LTR">Litros (LTR)</option>
+                                <option value="CJA">Cajas (CJA)</option>
+                                <option value="BAL">Baldes (BAL)</option>
+                                <option value="GLN">Galones (GLN)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mt-4">
+                                <input class="form-check-input" type="checkbox" id="chkStockExpress" checked>
+                                <label class="form-check-label fw-semibold" for="chkStockExpress">Controla Inventario / Stock</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success fw-semibold" onclick="guardarArticuloExpress()">
+                    <i class="bi bi-check-circle me-1"></i> Guardar y Añadir a Solicitud
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let itemsRequerimiento = [];
+
+        function abrirBuscadorArticulos() {
+            const modalBusqueda = new bootstrap.Modal(document.getElementById('modalBuscarArticulos'));
+            modalBusqueda.show();
+        }
+
+        async function cargarSubCatsBusqueda(catId) {
+            const ddl = document.getElementById('ddlSubCatModalBusqueda');
+            ddl.innerHTML = '<option value="">-- Todas las SubCategorías --</option>';
+            if (!catId) return;
+
+            const res = await fetch(`?handler=SubCategorias&categoriaId=${catId}`);
+            if (res.ok) {
+                const data = await res.json();
+                data.forEach(s => {
+                    ddl.innerHTML += `<option value="${s.id}">${s.nombre}</option>`;
+                });
+            }
+        }
+
+        async function ejecutarBusquedaArticulos() {
+            const catId = document.getElementById('ddlCatModalBusqueda').value;
+            const subCatId = document.getElementById('ddlSubCatModalBusqueda').value;
+            const busqueda = document.getElementById('txtTextoBusqueda').value;
+            const tipoReq = document.getElementById('ddlTipoReq').value;
+
+            const tbody = document.getElementById('tbodyResultadosBusqueda');
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div> Buscando...</td></tr>';
+
+            const res = await fetch(`?handler=BuscarArticulos&categoriaId=${catId}&subCategoriaId=${subCatId}&busqueda=${encodeURIComponent(busqueda)}&tipoReq=${tipoReq}`);
+            if (res.ok) {
+                const lista = await res.json();
+                if (lista.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No se encontraron artículos que coincidan.</td></tr>';
+                    return;
+                }
+
+                let html = '';
+                lista.forEach(item => {
+                    const stockDisplay = item.controlaStock
+                        ? `<span class="fw-bold ${item.stockActual <= 0 ? 'text-danger' : 'text-dark'}">${item.stockActual.toFixed(2)}</span>`
+                        : '<span class="badge bg-info text-dark">Servicio (N/A)</span>';
+
+                    html += `
+                        <tr>
+                            <td class="fw-bold text-primary">${item.sku}</td>
+                            <td><div class="fw-semibold text-dark">${item.nombre}</div></td>
+                            <td><span class="badge bg-light text-dark border">${item.categoria}</span> <small class="text-muted">${item.subCategoria}</small></td>
+                            <td><span class="badge bg-secondary">${item.unidadMedida}</span></td>
+                            <td class="text-end">${stockDisplay}</td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-success" onclick='agregarArticuloAlDetalle(${JSON.stringify(item)})'>
+                                    <i class="bi bi-plus-lg"></i>
+                                </button>
+                            </td>
+                        </tr>`;
+                });
+                tbody.innerHTML = html;
+            }
+        }
+
+        function agregarArticuloAlDetalle(item) {
+            if (itemsRequerimiento.some(i => i.productoID === item.productoID)) {
+                alert("El artículo ya se encuentra agregado en la lista.");
+                return;
+            }
+
+            itemsRequerimiento.push({
+                productoID: item.productoID,
+                sku: item.sku,
+                nombre: item.nombre,
+                categoria: item.categoria,
+                subCategoria: item.subCategoria,
+                unidadMedida: item.unidadMedida,
+                cantidad: 1,
+                observaciones: ''
+            });
+
+            renderizarTablaDetalle();
+            bootstrap.Modal.getInstance(document.getElementById('modalBuscarArticulos')).hide();
+        }
+
+        function renderizarTablaDetalle() {
+            const tbody = document.getElementById('tbodyDetalle');
+            if (itemsRequerimiento.length === 0) {
+                tbody.innerHTML = `
+                    <tr id="trVacio">
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-cart-x fs-2 d-block mb-2 text-secondary"></i>
+                            <span>No se han agregado artículos al requerimiento. Presione <strong>"Agregar Artículos / Servicios"</strong>.</span>
+                        </td>
+                    </tr>`;
+                document.getElementById('txtItemsJson').value = "[]";
+                return;
+            }
+
+            let html = '';
+            itemsRequerimiento.forEach((item, index) => {
+                html += `
+                    <tr>
+                        <td class="fw-bold text-primary">${item.sku}</td>
+                        <td class="fw-semibold text-dark">${item.nombre}</td>
+                        <td><small class="text-muted">${item.categoria} / ${item.subCategoria}</small></td>
+                        <td><span class="badge bg-secondary">${item.unidadMedida}</span></td>
+                        <td>
+                            <input type="number" step="0.01" min="0.01" class="form-control form-control-sm text-end fw-bold" value="${item.cantidad}" onchange="actualizarCantidad(${index}, this.value)" required />
+                        </td>
+                        <td>
+                            <input type="text" class="form-control form-control-sm" placeholder="Especificaciones opcionales..." value="${item.observaciones}" onchange="actualizarObservacion(${index}, this.value)" />
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarDetalle(${index})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+            });
+
+            tbody.innerHTML = html;
+            document.getElementById('txtItemsJson').value = JSON.stringify(itemsRequerimiento);
+        }
+
+        function actualizarCantidad(index, val) {
+            itemsRequerimiento[index].cantidad = parseFloat(val) || 1;
+            document.getElementById('txtItemsJson').value = JSON.stringify(itemsRequerimiento);
+        }
+
+        function actualizarObservacion(index, val) {
+            itemsRequerimiento[index].observaciones = val;
+            document.getElementById('txtItemsJson').value = JSON.stringify(itemsRequerimiento);
+        }
+
+        function eliminarDetalle(index) {
+            itemsRequerimiento.splice(index, 1);
+            renderizarTablaDetalle();
+        }
+
+        function abrirModalCrearExpress() {
+            document.getElementById('txtNombreExpress').value = "";
+            document.getElementById('ddlCatExpress').value = "";
+            document.getElementById('ddlSubCatExpress').innerHTML = '<option value="">-- Seleccionar Categoría primero --</option>';
+            document.getElementById('txtSKUExpress').value = "";
+
+            const modalExpress = new bootstrap.Modal(document.getElementById('modalCrearExpress'));
+            modalExpress.show();
+        }
+
+        async function cargarSubCatsExpress(catId) {
+            const ddl = document.getElementById('ddlSubCatExpress');
+            ddl.innerHTML = '<option value="">-- Seleccionar --</option>';
+            document.getElementById('txtSKUExpress').value = "";
+            if (!catId) return;
+
+            const res = await fetch(`?handler=SubCategorias&categoriaId=${catId}`);
+            if (res.ok) {
+                const data = await res.json();
+                data.forEach(s => {
+                    ddl.innerHTML += `<option value="${s.id}">${s.nombre}</option>`;
+                });
+            }
+        }
+
+        async function generarCodigoExpress() {
+            const catId = document.getElementById('ddlCatExpress').value;
+            const subCatId = document.getElementById('ddlSubCatExpress').value;
+            if (!catId || !subCatId) return;
+
+            const res = await fetch(`?handler=GenerarCodigo&categoriaId=${catId}&subCategoriaId=${subCatId}`);
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('txtSKUExpress').value = data.codigo;
+            }
+        }
+
+        async function guardarArticuloExpress() {
+            const catId = document.getElementById('ddlCatExpress').value;
+            const subCatId = document.getElementById('ddlSubCatExpress').value;
+            const sku = document.getElementById('txtSKUExpress').value;
+            const nombre = document.getElementById('txtNombreExpress').value;
+            const um = document.getElementById('ddlUMExpress').value;
+            const stock = document.getElementById('chkStockExpress').checked;
+
+            if (!catId || !subCatId || !nombre) {
+                alert("Por favor complete los campos obligatorios.");
+                return;
+            }
+
+            const payload = {
+                CategoriaID: parseInt(catId),
+                SubcategoriaID: parseInt(subCatId),
+                SKU: sku,
+                Nombre: nombre,
+                UnidadMedida: um,
+                ControlaStock: stock,
+                Estado: true
+            };
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+            const res = await fetch('?handler=CrearArticuloExpress', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                const result = await res.json();
+                if (result.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('modalCrearExpress')).hide();
+                    bootstrap.Modal.getInstance(document.getElementById('modalBuscarArticulos')).hide();
+
+                    agregarArticuloAlDetalle(result.producto);
+                } else {
+                    alert("Error: " + result.message);
+                }
+            }
+        }
+    </script>
+}

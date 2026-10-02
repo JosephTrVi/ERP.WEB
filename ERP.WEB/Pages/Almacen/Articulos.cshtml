@@ -1,0 +1,412 @@
+﻿@page
+@model ERP.WEB.Pages.Almacen.ArticulosModel
+@{
+    ViewData["Title"] = "Catálogo de Artículos";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold text-dark mb-0"><i class="bi bi-tags me-2 text-success"></i>Catálogo de Artículos</h4>
+        <small class="text-muted">Gestión e inventario de artículos del almacén</small>
+    </div>
+    <button class="btn btn-success fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalProducto" onclick="limpiarFormulario()">
+        <i class="bi bi-plus-lg me-1"></i> Nuevo Artículo
+    </button>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+    <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-check-circle me-1"></i> @Model.MensajeExito
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- BARRA DE FILTROS Y BÚSQUEDA -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body bg-light rounded-3 p-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label fw-semibold small text-muted mb-1">Categoría</label>
+                <select class="form-select form-select-sm" asp-for="CategoriaFiltroID" asp-items="Model.SelectCategorias" id="ddlCategoriaFiltro" onchange="cargarSubCategoriasFiltro(this.value)">
+                    <option value="">-- Todas las Categorías --</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold small text-muted mb-1">SubCategoría</label>
+                <select class="form-select form-select-sm" asp-for="SubCategoriaFiltroID" asp-items="Model.SelectSubCategorias" id="ddlSubCategoriaFiltro">
+                    <option value="">-- Todas las SubCategorías --</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold small text-muted mb-1">Buscar por Código / Nombre</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" asp-for="Busqueda" placeholder="Escriba SKU o nombre del artículo..." />
+                </div>
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm fw-semibold w-100">
+                    <i class="bi bi-funnel me-1"></i> Filtrar
+                </button>
+                <a asp-page="/Almacen/Articulos" class="btn btn-outline-secondary btn-sm" title="Limpiar Filtros">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- TABLA DE RESULTADOS -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>SKU</th>
+                        <th>Artículo</th>
+                        <th>Categoría / SubCategoría</th>
+                        <th>U.M.</th>
+                        <th class="text-end">Stock Actual</th>
+                        <th class="text-end">Costo Prom.</th>
+                        <th class="text-end">P. Venta</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.SeEfectuoBusqueda)
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center py-5 text-muted">
+                                <i class="bi bi-funnel-fill fs-2 d-block text-primary mb-2"></i>
+                                <span class="fw-semibold">Seleccione un filtro o ingrese un código/nombre y haga clic en "Filtrar" para consultar los artículos.</span>
+                            </td>
+                        </tr>
+                    }
+                    else if (!Model.ListaProductos.Any())
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                No se encontraron artículos que coincidan con los criterios ingresados.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model.ListaProductos)
+                        {
+                            <tr>
+                                <td class="fw-bold text-primary fs-7">@item.SKU</td>
+                                <td>
+                                    <div class="fw-semibold text-dark">@item.Nombre</div>
+                                    @if (!string.IsNullOrEmpty(item.Descripcion))
+                                    {
+                                        <small class="text-muted d-block text-truncate" style="max-width: 280px;">@item.Descripcion</small>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">@(item.Categoria?.Nombre ?? "S/C")</span>
+                                    <small class="text-muted d-block mt-1">@(item.SubCategoria?.Nombre ?? "")</small>
+                                </td>
+                                <td><span class="badge bg-secondary">@item.UnidadMedida</span></td>
+                                <td class="text-end fw-bold">
+                                    @if (item.ControlaStock)
+                                    {
+                                        <span class="@(item.StockActual <= item.StockMinimo ? "text-danger" : "text-dark")">
+                                            @item.StockActual.ToString("N2")
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-info text-dark"><i class="bi bi-gear-fill me-1"></i>Servicio (N/A)</span>
+                                    }
+                                </td>
+                                <td class="text-end text-muted">S/ @item.CostoPromedio.ToString("N2")</td>
+                                <td class="text-end fw-semibold text-dark">S/ @item.PrecioVenta.ToString("N2")</td>
+                                <td class="text-center">
+                                    @if (item.Estado)
+                                    {
+                                        <span class="badge bg-success">Activo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Inactivo</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-primary"
+                                            onclick="editarProducto(@item.ProductoID, '@item.SKU', '@item.Nombre', '@item.Descripcion', @item.CategoriaID, @item.SubcategoriaID, '@item.UnidadMedida', @item.StockMinimo, @item.StockMaximo, @item.PrecioVenta, @item.Estado.ToString().ToLower())"
+                                            data-bs-toggle="modal" data-bs-target="#modalProducto">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR / EDITAR -->
+<div class="modal fade" id="modalProducto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold" id="modalTitle"><i class="bi bi-box-seam me-2"></i> Nuevo Artículo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" asp-page-handler="Guardar">
+                <div class="modal-body">
+                    <!-- ENVIAR FILTROS ACTUALES AL SERVIDOR PARA PRESERVAR EL ESTADO -->
+                    <input type="hidden" name="catFiltro" value="@Model.CategoriaFiltroID" />
+                    <input type="hidden" name="subCatFiltro" value="@Model.SubCategoriaFiltroID" />
+                    <input type="hidden" name="busquedaFiltro" value="@Model.Busqueda" />
+
+                    <input type="hidden" asp-for="InputProducto.ProductoID" id="txtProductoID" value="0" />
+
+                    <div class="row g-3">
+                        <!-- 1. CATEGORÍA Y SUBCATEGORÍA -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Categoría <span class="text-danger">*</span></label>
+                            <select class="form-select" asp-for="InputProducto.CategoriaID" asp-items="Model.SelectCategorias" id="ddlCategoriaModal" onchange="cargarSubCategoriasModal(this.value)" required>
+                                <option value="">-- Seleccionar --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">SubCategoría <span class="text-danger">*</span></label>
+                            <select class="form-select" asp-for="InputProducto.SubcategoriaID" id="ddlSubCategoriaModal" onchange="generarCodigoArticulo()" required>
+                                <option value="">-- Seleccionar Categoría primero --</option>
+                            </select>
+                        </div>
+
+                        <!-- 2. SKU AUTOGENERADO Y NOMBRE -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">SKU / Código <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="text" class="form-control bg-light fw-bold text-primary" asp-for="InputProducto.SKU" id="txtSKU" readonly placeholder="Autogenerado" required />
+                                <span class="input-group-text bg-light"><i class="bi bi-lock-fill text-muted"></i></span>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">Nombre del Artículo <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" asp-for="InputProducto.Nombre" id="txtNombre" required />
+                        </div>
+
+                        <!-- 3. MEDIDAS Y VALORES -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Unidad Medida <span class="text-danger">*</span></label>
+                            <select class="form-select" asp-for="InputProducto.UnidadMedida" id="ddlUM">
+                                <option value="UND">Unidades (UND)</option>
+                                <option value="KGR">Kilogramos (KGR)</option>
+                                <option value="MTR">Metros (MTR)</option>
+                                <option value="LTR">Litros (LTR)</option>
+                                <option value="CJA">Cajas (CJA)</option>
+                                <option value="BAL">Baldes (BAL)</option>
+                                <option value="SAC">Sacos (SAC)</option>
+                                <option value="GLN">Galones (GLN)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Stock Mínimo</label>
+                            <input type="number" step="0.01" class="form-control" asp-for="InputProducto.StockMinimo" id="txtStockMin" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Precio Venta (S/)</label>
+                            <input type="number" step="0.01" class="form-control" asp-for="InputProducto.PrecioVenta" id="txtPrecioVenta" />
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Descripción / Especificaciones</label>
+                            <textarea class="form-control" asp-for="InputProducto.Descripcion" id="txtDescripcion" rows="2"></textarea>
+                        </div>
+
+                        <!-- CONTROL DE STOCK Y ESTADO -->
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" asp-for="InputProducto.ControlaStock" id="chkControlaStock" onchange="evaluarControlStock()" checked>
+                                <label class="form-check-label fw-semibold" for="chkControlaStock">Controla Inventario / Stock</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" asp-for="InputProducto.Estado" id="chkEstado" checked>
+                                <label class="form-check-label fw-semibold" for="chkEstado">Artículo Activo</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success fw-semibold"><i class="bi bi-save me-1"></i> Guardar Artículo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Cargar SubCategorías para el Filtro de búsqueda
+        async function cargarSubCategoriasFiltro(categoriaId, subCategoriaSeleccionada = null) {
+            const ddlSubCat = document.getElementById('ddlSubCategoriaFiltro');
+            ddlSubCat.innerHTML = '<option value="">-- Todas las SubCategorías --</option>';
+
+            if (!categoriaId) return;
+
+            try {
+                const response = await fetch(`?handler=SubCategoriasPorCategoria&categoriaId=${categoriaId}`);
+                if (response.ok) {
+                    const subcategorias = await response.json();
+                    subcategorias.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.id;
+                        option.textContent = item.nombre;
+                        if (subCategoriaSeleccionada && item.id == subCategoriaSeleccionada) {
+                            option.selected = true;
+                        }
+                        ddlSubCat.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error("Error al cargar subcategorías en filtro:", error);
+            }
+        }
+
+        // Cargar SubCategorías para el Modal Crear/Editar
+        async function cargarSubCategoriasModal(categoriaId, subCategoriaSeleccionada = null) {
+            const ddlSubCat = document.getElementById('ddlSubCategoriaModal');
+            ddlSubCat.innerHTML = '<option value="">-- Seleccionar --</option>';
+
+            if (!categoriaId) return;
+
+            try {
+                const response = await fetch(`?handler=SubCategoriasPorCategoria&categoriaId=${categoriaId}`);
+                if (response.ok) {
+                    const subcategorias = await response.json();
+                    subcategorias.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.id;
+                        option.textContent = item.nombre;
+                        if (subCategoriaSeleccionada && item.id == subCategoriaSeleccionada) {
+                            option.selected = true;
+                        }
+                        ddlSubCat.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error("Error al cargar subcategorías en modal:", error);
+            }
+        }
+
+        // GENERAR CÓDIGO SKU AUTOGENERADO
+        async function generarCodigoArticulo() {
+            const idProd = document.getElementById('txtProductoID').value;
+            if (idProd !== "0") return; // Solo autogenerar si es un nuevo registro
+
+            const catId = document.getElementById('ddlCategoriaModal').value;
+            const subCatId = document.getElementById('ddlSubCategoriaModal').value;
+            const txtSKU = document.getElementById('txtSKU');
+
+            if (!catId || !subCatId) {
+                txtSKU.value = "";
+                return;
+            }
+
+            try {
+                const response = await fetch(`?handler=GenerarCodigo&categoriaId=${catId}&subCategoriaId=${subCatId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    txtSKU.value = data.codigo;
+                }
+            } catch (error) {
+                console.error("Error al autogenerar código SKU:", error);
+            }
+        }
+
+        async function limpiarFormulario() {
+            document.getElementById('modalTitle').innerText = "Nuevo Artículo";
+            document.getElementById('txtProductoID').value = "0";
+            document.getElementById('txtSKU').value = "";
+            document.getElementById('txtNombre').value = "";
+            document.getElementById('txtDescripcion').value = "";
+            document.getElementById('ddlUM').value = "UND";
+            document.getElementById('txtStockMin').value = "0";
+            document.getElementById('txtPrecioVenta').value = "0";
+            document.getElementById('chkEstado').checked = true;
+
+            // Heredar los filtros activos en el index hacia el modal de creación
+            const catFiltroVal = document.getElementById('ddlCategoriaFiltro').value;
+            const subCatFiltroVal = document.getElementById('ddlSubCategoriaFiltro').value;
+            const ddlCatModal = document.getElementById('ddlCategoriaModal');
+
+            if (catFiltroVal && catFiltroVal !== "") {
+                ddlCatModal.value = catFiltroVal;
+                if (subCatFiltroVal && subCatFiltroVal !== "") {
+                    await cargarSubCategoriasModal(catFiltroVal, subCatFiltroVal);
+                    await generarCodigoArticulo();
+                } else {
+                    await cargarSubCategoriasModal(catFiltroVal);
+                }
+            } else {
+                ddlCatModal.value = "";
+                document.getElementById('ddlSubCategoriaModal').innerHTML = '<option value="">-- Seleccionar Categoría primero --</option>';
+            }
+        }
+
+        async function editarProducto(id, sku, nombre, desc, catId, subCatId, um, stockMin, stockMax, precio, estado) {
+            document.getElementById('modalTitle').innerText = "Editar Artículo";
+            document.getElementById('txtProductoID').value = id;
+            document.getElementById('txtSKU').value = sku;
+            document.getElementById('txtNombre').value = nombre;
+            document.getElementById('txtDescripcion').value = desc;
+            document.getElementById('ddlCategoriaModal').value = catId;
+
+            // Cargar subcategorías de la categoría correspondiente y preseleccionar
+            await cargarSubCategoriasModal(catId, subCatId);
+
+            document.getElementById('ddlUM').value = um;
+            document.getElementById('txtStockMin').value = stockMin;
+            document.getElementById('txtPrecioVenta').value = precio;
+            document.getElementById('chkEstado').checked = estado;
+        }
+
+        // Mantener seleccionada la subcategoría en el filtro al cargar o recargar la página
+        document.addEventListener("DOMContentLoaded", function () {
+            const catFiltroId = document.getElementById('ddlCategoriaFiltro').value;
+            const subCatFiltroId = "@(Model.SubCategoriaFiltroID.HasValue? Model.SubCategoriaFiltroID.Value : "")";
+
+            if (catFiltroId) {
+                cargarSubCategoriasFiltro(catFiltroId, subCatFiltroId);
+            }
+        });
+
+                function evaluarControlStock() {
+            const chkStock = document.getElementById('chkControlaStock');
+            const txtStockMin = document.getElementById('txtStockMin');
+
+            if (!chkStock.checked) {
+                txtStockMin.value = "0";
+                txtStockMin.disabled = true;
+            } else {
+                txtStockMin.disabled = false;
+            }
+        }
+
+        // Al cambiar categoría en el modal, evaluar si es "Servicios"
+        function evaluarCategoriaServicio() {
+            const ddlCat = document.getElementById('ddlCategoriaModal');
+            const textoCategoria = ddlCat.options[ddlCat.selectedIndex]?.text.toLowerCase() || "";
+            const chkStock = document.getElementById('chkControlaStock');
+
+            if (textoCategoria.includes("servicio")) {
+                chkStock.checked = false;
+                evaluarControlStock();
+            }
+        }
+    </script>
+}

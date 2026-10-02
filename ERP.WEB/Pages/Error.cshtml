@@ -1,0 +1,15 @@
+﻿@page
+@model ERP.WEB.Pages.ErrorModel
+@{
+    ViewData["Title"] = "Error";
+}
+
+<h1 class="text-danger">Error.</h1>
+<h2 class="text-danger">Se ha producido un error al procesar la solicitud.</h2>
+
+@if (Model.ShowRequestId)
+{
+    <p>
+        <strong>ID de solicitud:</strong> <code>@Model.RequestId</code>
+    </p>
+}
