@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using ERP.WEB.Data;
 using ERP.WEB.Models.Logistica;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 
 namespace ERP.WEB.Pages.Compras
 {
@@ -88,6 +90,71 @@ namespace ERP.WEB.Pages.Compras
             public string Departamento { get; set; } = string.Empty;
             public string Provincia { get; set; } = string.Empty;
             public string Distrito { get; set; } = string.Empty;
+        }
+
+        // HANDLER AJAX para consultar RUC con OpenRUC
+        public async Task<JsonResult> OnGetConsultarRucAsync(string ruc)
+        {
+            if (string.IsNullOrWhiteSpace(ruc) || ruc.Length != 11)
+            {
+                return new JsonResult(new { success = false, message = "El RUC debe tener exactamente 11 dígitos." });
+            }
+
+            try
+            {
+                using var httpClient = new HttpClient();
+
+                // Agregar User-Agent para evitar bloqueos de peticiones automatizadas
+                httpClient.DefaultRequestHeaders.Add("User-Agent", "ERP-System-App");
+
+                var response = await httpClient.GetAsync($"https://openruc.com/api/ruc/{ruc}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var data = await response.Content.ReadFromJsonAsync<OpenRucResultDTO>();
+
+                    if (data != null && !string.IsNullOrWhiteSpace(data.RazonSocial))
+                    {
+                        return new JsonResult(new
+                        {
+                            success = true,
+                            razonSocial = data.RazonSocial,
+                            direccion = data.Direccion,
+                            ubigeoID = data.Ubigeo,
+                            estadoSunat = data.Estado,
+                            condicionSunat = data.Condicion
+                        });
+                    }
+                }
+
+                return new JsonResult(new { success = false, message = "No se encontraron datos en SUNAT para el RUC ingresado." });
+            }
+            catch (Exception ex)
+            {
+                return new JsonResult(new { success = false, message = $"Error al consultar la API: {ex.Message}" });
+            }
+        }
+
+        // DTO para deserializar la respuesta de OpenRUC
+        public class OpenRucResultDTO
+        {
+            [JsonPropertyName("ruc")]
+            public string Ruc { get; set; } = string.Empty;
+
+            [JsonPropertyName("razon_social")]
+            public string RazonSocial { get; set; } = string.Empty;
+
+            [JsonPropertyName("estado")]
+            public string Estado { get; set; } = string.Empty;
+
+            [JsonPropertyName("condicion")]
+            public string Condicion { get; set; } = string.Empty;
+
+            [JsonPropertyName("direccion")]
+            public string Direccion { get; set; } = string.Empty;
+
+            [JsonPropertyName("ubigeo")]
+            public string Ubigeo { get; set; } = string.Empty;
         }
     }
 }

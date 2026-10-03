@@ -16,6 +16,7 @@
 
 <form method="post" asp-page-handler="GuardarOC" id="formOC">
     <input type="hidden" asp-for="InputOC.RequerimientoID" />
+    <input type="hidden" asp-for="InputOC.ProveedorID" id="txtProveedorID" />
     <input type="hidden" asp-for="ItemsJson" id="txtItemsJson" />
 
     <!-- DATOS CABECERA ORDEN DE COMPRA -->
@@ -29,10 +30,18 @@
                     <label class="form-label fw-semibold">Código OC</label>
                     <input type="text" class="form-control bg-light fw-bold text-primary" asp-for="InputOC.Codigo" readonly />
                 </div>
+
+                <!-- SELECTOR DE PROVEEDOR CON BUSCADOR Y CREACIÓN EXPRESS -->
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">Proveedor / Empresa <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" asp-for="NombreProveedor" placeholder="Ej: Aceros Industriales S.A.C." required />
+                    <div class="input-group">
+                        <input type="text" class="form-control fw-bold bg-light" asp-for="NombreProveedor" id="txtNombreProveedor" placeholder="Seleccione un proveedor..." readonly required />
+                        <button type="button" class="btn btn-primary" onclick="abrirBuscadorProveedores()" title="Buscar o Crear Proveedor">
+                            <i class="bi bi-search me-1"></i> Buscar
+                        </button>
+                    </div>
                 </div>
+
                 <div class="col-md-3">
                     <label class="form-label fw-semibold">N° Cotización Proveedor</label>
                     <input type="text" class="form-control" asp-for="InputOC.NumeroCotizacionProveedor" placeholder="Ej: COT-2026-99" />
@@ -55,7 +64,7 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label fw-semibold">Forma de Pago</label>
-                    <select class="form-select" asp-for="InputOC.FormaPago">
+                    <select class="form-select" asp-for="InputOC.FormaPago" id="ddlFormaPago">
                         <option value="Contado">Contado</option>
                         <option value="Crédito 15 días">Crédito 15 días</option>
                         <option value="Crédito 30 días" selected>Crédito 30 días</option>
@@ -70,7 +79,7 @@
         </div>
     </div>
 
-    <!-- TABLA DETALLE DE PRECIOS -->
+    <!-- TABLA DETALLE DE PRECIOS CON CÁLCULO REACTIVO -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white py-3 border-bottom">
             <h6 class="fw-bold text-dark mb-0"><i class="bi bi-receipt me-2 text-success"></i>Precios y Cotizaciones por Ítem</h6>
@@ -83,8 +92,8 @@
                             <th>Artículo / Servicio</th>
                             <th>U.M.</th>
                             <th style="width: 130px;" class="text-end">Cantidad</th>
-                            <th style="width: 160px;" class="text-end">Precio Unit. (Sin IGV) <span class="text-danger">*</span></th>
-                            <th style="width: 160px;" class="text-end">SubTotal (Sin IGV)</th>
+                            <th style="width: 170px;" class="text-end">Precio Unit. (Sin IGV) <span class="text-danger">*</span></th>
+                            <th style="width: 170px;" class="text-end">SubTotal (Sin IGV)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -113,7 +122,7 @@
                                     <span class="fw-bold text-dark">@item.Cantidad.ToString("N2")</span>
                                 </td>
                                 <td>
-                                    <input type="number" step="0.0001" min="0.0001" class="form-control form-control-sm text-end fw-bold item-precio" value="0.00" onchange="recalcularTotales()" onkeyup="recalcularTotales()" required />
+                                    <input type="number" step="0.0001" min="0.0000" class="form-control form-control-sm text-end fw-bold item-precio" value="0.00" oninput="recalcularTotales()" onchange="recalcularTotales()" required />
                                 </td>
                                 <td class="text-end">
                                     <span class="fw-bold text-primary item-subtotal-linea">0.00</span>
@@ -132,7 +141,7 @@
                         <table class="table table-sm table-borderless mb-0">
                             <tr>
                                 <td class="fw-semibold text-end">SubTotal (Sin IGV):</td>
-                                <td class="text-end fw-bold" style="width: 140px;"><span class="simbolo-moneda">S/</span> <span id="lblSubTotal">0.00</span></td>
+                                <td class="text-end fw-bold" style="width: 150px;"><span class="simbolo-moneda">S/</span> <span id="lblSubTotal">0.00</span></td>
                             </tr>
                             <tr>
                                 <td class="fw-semibold text-end">IGV (18%):</td>
@@ -155,6 +164,83 @@
     </div>
 </form>
 
+<!-- MODAL BÚSQUEDA Y CREACIÓN DE PROVEEDORES -->
+<div class="modal fade" id="modalBuscadorProveedor" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-truck me-2"></i> Seleccionar Proveedor</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <div class="input-group mb-3 shadow-sm">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" id="txtBusquedaProvModal" placeholder="Buscar por RUC o Razón Social..." onkeyup="ejecutarBusquedaProveedor()" />
+                </div>
+
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-body p-0" style="max-height: 220px; overflow-y: auto;">
+                        <ul class="list-group list-group-flush" id="ulResultadosProv">
+                            <li class="list-group-item text-center text-muted py-3">Ingrese al menos 2 caracteres para buscar.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- ALERTA CREAR EXPRESS -->
+                <div class="alert alert-info d-flex justify-content-between align-items-center mb-0">
+                    <div>
+                        <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+                        <span>¿El proveedor no existe en el catálogo?</span>
+                    </div>
+                    <button type="button" class="btn btn-outline-dark btn-sm fw-semibold" onclick="abrirModalCrearProvExpress()">
+                        <i class="bi bi-plus-circle me-1"></i> Crear Proveedor Express
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer bg-white">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR PROVEEDOR EXPRESS CON CONSULTA SUNAT -->
+<div class="modal fade" id="modalCrearProvExpress" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2"></i> Crear Proveedor Express</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">RUC (11 dígitos)</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control fw-bold" id="txtRucExpress" maxlength="11" placeholder="Ej: 20100047218" />
+                        <button type="button" class="btn btn-dark" id="btnSunatExpress" onclick="buscarSunatExpress()">
+                            <i class="bi bi-search me-1"></i> SUNAT
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Razón Social <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="txtRazonSocialExpress" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Dirección Fiscal</label>
+                    <input type="text" class="form-control" id="txtDireccionExpress" />
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success fw-semibold" onclick="guardarProveedorExpress()">
+                    <i class="bi bi-check-circle me-1"></i> Guardar y Seleccionar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         function recalcularTotales() {
@@ -172,7 +258,10 @@
                 const desc = f.querySelector('.item-desc').value;
                 const um = f.querySelector('.item-um').value;
                 const cant = parseFloat(f.querySelector('.item-cant').value) || 0;
-                const precio = parseFloat(f.querySelector('.item-precio').value) || 0;
+
+                // Conversión limpia a decimal
+                const precioInput = f.querySelector('.item-precio').value;
+                const precio = parseFloat(precioInput) || 0;
 
                 const subTotalLinea = cant * precio;
                 subTotalGeneral += subTotalLinea;
@@ -198,7 +287,216 @@
             document.getElementById('txtItemsJson').value = JSON.stringify(listaItems);
         }
 
+        // BÚSQUEDA Y SELECCIÓN DE PROVEEDORES
+        function abrirBuscadorProveedores() {
+            document.getElementById('txtBusquedaProvModal').value = "";
+            document.getElementById('ulResultadosProv').innerHTML = '<li class="list-group-item text-center text-muted py-3">Ingrese al menos 2 caracteres para buscar.</li>';
+
+            const modal = new bootstrap.Modal(document.getElementById('modalBuscadorProveedor'));
+            modal.show();
+        }
+
+        async function ejecutarBusquedaProveedor() {
+            const q = document.getElementById('txtBusquedaProvModal').value.trim();
+            const ul = document.getElementById('ulResultadosProv');
+
+            if (q.length < 2) {
+                ul.innerHTML = '<li class="list-group-item text-center text-muted py-3">Ingrese al menos 2 caracteres para buscar.</li>';
+                return;
+            }
+
+            const res = await fetch(`?handler=BuscarProveedores&query=${encodeURIComponent(q)}`);
+            if (res.ok) {
+                const lista = await res.json();
+                if (lista.length === 0) {
+                    ul.innerHTML = '<li class="list-group-item text-center text-muted py-3">No se encontraron proveedores que coincidan.</li>';
+                    return;
+                }
+
+                let html = '';
+                lista.forEach(p => {
+                    html += `
+                        <li class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" style="cursor:pointer;" onclick='seleccionarProveedor(${JSON.stringify(p)})'>
+                            <div>
+                                <strong class="text-dark d-block">${p.razonSocial}</strong>
+                                <small class="text-muted">RUC: ${p.numDocumento}</small>
+                            </div>
+                            <span class="btn btn-sm btn-outline-primary fw-semibold"><i class="bi bi-check-lg"></i> Seleccionar</span>
+                        </li>`;
+                });
+                ul.innerHTML = html;
+            }
+        }
+
+        function seleccionarProveedor(p) {
+            document.getElementById('txtProveedorID').value = p.proveedorID || p.ProveedorID;
+            document.getElementById('txtNombreProveedor').value = `${p.numDocumento} - ${p.razonSocial}`;
+
+            if (p.monedaHabitual) {
+                document.getElementById('ddlMoneda').value = p.monedaHabitual;
+            }
+            if (p.formaPagoHabitual) {
+                document.getElementById('ddlFormaPago').value = p.formaPagoHabitual;
+            }
+
+            recalcularTotales();
+            bootstrap.Modal.getInstance(document.getElementById('modalBuscadorProveedor')).hide();
+        }
+
+        function abrirModalCrearProvExpress() {
+            document.getElementById('txtRucExpress').value = "";
+            document.getElementById('txtRazonSocialExpress').value = "";
+            document.getElementById('txtDireccionExpress').value = "";
+
+            const modal = new bootstrap.Modal(document.getElementById('modalCrearProvExpress'));
+            modal.show();
+        }
+
+        async function buscarSunatExpress() {
+            const ruc = document.getElementById('txtRucExpress').value.trim();
+            if (ruc.length !== 11) {
+                alert("Ingrese un RUC de 11 dígitos.");
+                return;
+            }
+
+            const btn = document.getElementById('btnSunatExpress');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+            const res = await fetch(`?handler=ConsultarRuc&ruc=${ruc}`);
+            if (res.ok) {
+                const result = await res.json();
+                if (result.success) {
+                    document.getElementById('txtRazonSocialExpress').value = result.razonSocial || "";
+                    document.getElementById('txtDireccionExpress').value = result.direccion || "";
+                } else {
+                    alert(result.message);
+                }
+            }
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-search me-1"></i> SUNAT';
+        }
+
+        async function guardarProveedorExpress() {
+            const ruc = document.getElementById('txtRucExpress').value.trim();
+            const razon = document.getElementById('txtRazonSocialExpress').value.trim();
+            const dir = document.getElementById('txtDireccionExpress').value.trim();
+
+            if (!ruc || !razon) {
+                alert("Complete el RUC y la Razón Social.");
+                return;
+            }
+
+            const payload = {
+                TipoProveedor: "Nacional",
+                TipoDocumento: "RUC",
+                NumDocumento: ruc,
+                RazonSocial: razon,
+                Direccion: stringOrEmpty(dir),
+                PaisCodigo: "PER",
+                MonedaHabitual: "PEN",
+                Estado: true
+            };
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+            const res = await fetch('?handler=CrearProveedorExpress', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                const result = await res.json();
+                if (result.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('modalCrearProvExpress')).hide();
+                    bootstrap.Modal.getInstance(document.getElementById('modalBuscadorProveedor')).hide();
+
+                    seleccionarProveedor(result.proveedor);
+                } else {
+                    alert("Error: " + result.message);
+                }
+            }
+        }
+
+        function stringOrEmpty(str) { return str ? str : "Dirección no especificada"; }
+
         document.addEventListener("DOMContentLoaded", function() {
+            recalcularTotales();
+        });
+
+                function recalcularTotales() {
+            const moneda = document.getElementById('ddlMoneda')?.value || 'PEN';
+            const simbolo = moneda === 'USD' ? '$' : 'S/';
+
+            document.querySelectorAll('.simbolo-moneda').forEach(e => e.innerText = simbolo);
+
+            let subTotalGeneral = 0;
+            const filas = document.querySelectorAll('tbody tr');
+            const listaItems = [];
+
+            filas.forEach(f => {
+                const prodIdEl = f.querySelector('.item-prod-id');
+                if (!prodIdEl) return; // Omitir filas que no sean de ítems
+
+                const prodId = parseInt(prodIdEl.value) || 0;
+                const desc = f.querySelector('.item-desc')?.value || '';
+                const um = f.querySelector('.item-um')?.value || 'UND';
+
+                // Limpiar comas o formatos de miles en la cantidad
+                const cantRaw = f.querySelector('.item-cant')?.value || '0';
+                const cant = parseFloat(cantRaw.toString().replace(/,/g, '')) || 0;
+
+                // Obtener el precio unitario ingresado por el usuario
+                const precioInput = f.querySelector('.item-precio')?.value || '0';
+                const precio = parseFloat(precioInput.toString().replace(/,/g, '')) || 0;
+
+                const subTotalLinea = cant * precio;
+                subTotalGeneral += subTotalLinea;
+
+                // Actualizar el subtotal visual de la línea con 2 decimales
+                const lblSubTotalLinea = f.querySelector('.item-subtotal-linea');
+                if (lblSubTotalLinea) {
+                    lblSubTotalLinea.innerText = subTotalLinea.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                }
+
+                listaItems.push({
+                    ProductoID: prodId,
+                    DescripcionItem: desc,
+                    Cantidad: cant,
+                    UnidadMedida: um,
+                    PrecioUnitario: precio
+                });
+            });
+
+            const igv = subTotalGeneral * 0.18;
+            const total = subTotalGeneral + igv;
+
+            // Actualizar los elementos del resumen final
+            const lblSubTotal = document.getElementById('lblSubTotal');
+            const lblIGV = document.getElementById('lblIGV');
+            const lblTotal = document.getElementById('lblTotal');
+
+            if (lblSubTotal) lblSubTotal.innerText = subTotalGeneral.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            if (lblIGV) lblIGV.innerText = igv.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            if (lblTotal) lblTotal.innerText = total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            // Serializar el JSON para enviarlo al servidor
+            const txtJson = document.getElementById('txtItemsJson');
+            if (txtJson) txtJson.value = JSON.stringify(listaItems);
+        }
+
+        // Vincular los eventos input y keyup dinámicamente a todos los inputs de precio
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll('.item-precio').forEach(input => {
+                input.addEventListener('input', recalcularTotales);
+                input.addEventListener('keyup', recalcularTotales);
+                input.addEventListener('change', recalcularTotales);
+            });
+
             recalcularTotales();
         });
     </script>

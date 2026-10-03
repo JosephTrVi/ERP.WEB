@@ -2,6 +2,7 @@
 using ERP.WEB.Models.Logistica;
 using ERP.WEB.Models.Personal;
 using ERP.WEB.Models.Seguridad;
+using ERP.WEB.Models.Inventario;
 using Microsoft.EntityFrameworkCore;
 
 namespace ERP.WEB.Data
@@ -30,6 +31,10 @@ namespace ERP.WEB.Data
         public DbSet<OrdenesCompraDetalle> OrdenesCompraDetalle { get; set; } = null!;
         public DbSet<Proveedor> Proveedores { get; set; } = null!;
 
+        // Almacen
+        public DbSet<Almacen> Almacenes { get; set; } = null!;
+        public DbSet<IngresosAlmacenCabecera> IngresosAlmacenCabecera { get; set; } = null!;
+        public DbSet<IngresosAlmacenDetalle> IngresosAlmacenDetalle { get; set; } = null!;
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -155,6 +160,40 @@ namespace ERP.WEB.Data
             {
                 entity.ToTable("Proveedores", "Compras");
                 entity.HasKey(e => e.ProveedorID);
+            });
+
+            // CONFIGURACIÓN DE TABLAS DE INVENTARIO
+            modelBuilder.Entity<Almacen>(entity =>
+            {
+                entity.ToTable("Almacenes", "Inventario");
+                entity.HasKey(e => e.AlmacenID);
+            });
+
+            modelBuilder.Entity<IngresosAlmacenCabecera>(entity =>
+            {
+                entity.ToTable("IngresosAlmacenCabecera", "Inventario");
+                entity.HasKey(e => e.IngresoID);
+
+                entity.HasOne(i => i.OrdenCompra)
+                      .WithMany()
+                      .HasForeignKey(i => i.OrdenCompraID)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(i => i.Almacen)
+                      .WithMany()
+                      .HasForeignKey(i => i.AlmacenID)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<IngresosAlmacenDetalle>(entity =>
+            {
+                entity.ToTable("IngresosAlmacenDetalle", "Inventario");
+                entity.HasKey(e => e.IngresoDetalleID);
+
+                entity.HasOne(d => d.IngresoCabecera)
+                      .WithMany(c => c.Detalles)
+                      .HasForeignKey(d => d.IngresoID)
+                      .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

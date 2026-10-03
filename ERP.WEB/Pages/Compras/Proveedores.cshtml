@@ -1,7 +1,7 @@
 ﻿@page
 @model ERP.WEB.Pages.Compras.ProveedoresModel
 @{
-    ViewData["Title"] = "Gestión de Proveedores";
+    ViewData["Title"] = "Catálogo de Proveedores";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -133,14 +133,14 @@
                 <input type="hidden" asp-for="InputProveedor.ProveedorID" id="txtProveedorID" />
                 <div class="modal-body">
                     <div class="row g-3">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label fw-semibold">Tipo Proveedor <span class="text-danger">*</span></label>
                             <select class="form-select" asp-for="InputProveedor.TipoProveedor" id="ddlTipoProveedor" onchange="cambiarTipoProveedor()" required>
                                 <option value="Nacional">📦 Nacional (Perú)</option>
-                                <option value="Extranjero">🌐 Extranjero (Importación)</option>
+                                <option value="Extranjero">🌐 Extranjero</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label fw-semibold">Tipo Documento <span class="text-danger">*</span></label>
                             <select class="form-select" asp-for="InputProveedor.TipoDocumento" id="ddlTipoDoc" required>
                                 <option value="RUC">RUC</option>
@@ -149,9 +149,16 @@
                                 <option value="Pasaporte">Pasaporte / Otro</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">N° Documento / Tax ID <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control fw-bold" asp-for="InputProveedor.NumDocumento" id="txtNumDoc" required />
+
+                        <!-- CAMPO RUC / DOCUMENTO CON BOTÓN LUPA DE BÚSQUEDA SUNAT -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">N° Documento / RUC <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="text" class="form-control fw-bold" asp-for="InputProveedor.NumDocumento" id="txtNumDoc" maxlength="20" placeholder="Ej: 20100047218" required />
+                                <button type="button" class="btn btn-primary" id="btnBuscarSunat" onclick="consultarSunatRuc()" title="Consultar RUC en SUNAT">
+                                    <i class="bi bi-search me-1"></i> Buscar
+                                </button>
+                            </div>
                         </div>
 
                         <div class="col-md-8">
@@ -200,7 +207,7 @@
                             <input type="text" class="form-control" asp-for="InputProveedor.Direccion" id="txtDireccion" required />
                         </div>
 
-                        <!-- SECCIÓN TRIBUTARIA SUNAT (SOLO PERÚ) -->
+                        <!-- SECCIÓN TRIBUTARIA SUNAT (PERÚ) -->
                         <div class="col-12 bg-light p-3 rounded border" id="secSunatPeru">
                             <h6 class="fw-bold text-dark mb-2"><i class="bi bi-shield-check me-1 text-primary"></i> Atributos Tributarios (SUNAT - Perú)</h6>
                             <div class="row g-2">
@@ -288,6 +295,48 @@
                 document.getElementById('secSunatPeru').classList.add('d-none');
                 document.getElementById('secEstadoExtranjero').classList.remove('d-none');
                 document.getElementById('secZipExtranjero').classList.remove('d-none');
+            }
+        }
+
+        // FUNCIÓN DE BÚSQUEDA SUNAT VÍA OPENRUC
+        async function consultarSunatRuc() {
+            const ruc = document.getElementById('txtNumDoc').value.trim();
+            const tipoDoc = document.getElementById('ddlTipoDoc').value;
+
+            if (tipoDoc !== 'RUC' || ruc.length !== 11) {
+                alert("Por favor ingrese un número de RUC válido de 11 dígitos para consultar en SUNAT.");
+                return;
+            }
+
+            const btn = document.getElementById('btnBuscarSunat');
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Buscando...`;
+
+            try {
+                const res = await fetch(`?handler=ConsultarRuc&ruc=${ruc}`);
+                if (res.ok) {
+                    const result = await res.json();
+                    if (result.success) {
+                        document.getElementById('txtRazonSocial').value = result.razonSocial || "";
+                        document.getElementById('txtDireccion').value = result.direccion || "";
+
+                        if (result.ubigeoID) {
+                            document.getElementById('txtUbigeoID').value = result.ubigeoID;
+                            document.getElementById('lblUbigeoSeleccionado').innerText = `Ubigeo SUNAT detectado: ${result.ubigeoID}`;
+                        }
+
+                        alert(`✓ Contribuyente encontrado:\n${result.razonSocial}\nEstado: ${result.estadoSunat} - Condición: ${result.condicionSunat}`);
+                    } else {
+                        alert(result.message);
+                    }
+                } else {
+                    alert("No se pudo establecer comunicación con el servidor de consulta.");
+                }
+            } catch (e) {
+                alert("Ocurrió un error al intentar consultar la API de SUNAT.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="bi bi-search me-1"></i> Buscar`;
             }
         }
 

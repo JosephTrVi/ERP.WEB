@@ -157,6 +157,9 @@
                                 <a asp-page="/Almacen/Articulos" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/Almacen/Articulos" ? "active-link" : "")">
                                     <i class="bi bi-tags me-2"></i> Catálogo de Artículos
                                 </a>
+                                <a asp-page="/Almacen/BandejaRecepcion" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center">
+                                    <i class="bi bi-box-arrow-in-down me-2 text-success"></i> Recepción de Mercadería
+                                </a>
                                 <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
                                     <i class="bi bi-journal-bookmark me-2"></i> Kárdex / Movimientos
                                 </a>
@@ -177,7 +180,7 @@
                                 <a asp-page="/Compras/BandejaRequerimientos" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/Compras/BandejaRequerimientos" ? "active-link" : "")">
                                     <i class="bi bi-inbox me-2"></i> RQ Aprobados
                                 </a>
-                                <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
+                                <a asp-page="/Compras/OrdenesCompra" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center">
                                     <i class="bi bi-receipt me-2"></i> Órdenes de Compra
                                 </a>
                                 <a asp-page="/Compras/Proveedores" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center">

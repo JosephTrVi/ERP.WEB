@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using ERP.WEB.Data;
 using ERP.WEB.Models.Logistica;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace ERP.WEB.Pages.Compras
 {
@@ -51,7 +52,6 @@ namespace ERP.WEB.Pages.Compras
 
             RequerimientoBase = req;
 
-            // Generar correlativo OC (ej. OC-2026-0001)
             int anioActual = DateTime.Now.Year;
             int correlativo = await _context.OrdenesCompraCabecera
                 .Where(o => o.FechaEmision.Year == anioActual)
@@ -65,6 +65,92 @@ namespace ERP.WEB.Pages.Compras
             InputOC.FormaPago = "Crédito 30 días";
 
             return Page();
+        }
+
+        // HANDLER AJAX: BUSCAR PROVEEDORES REGISTRADOS
+        public async Task<JsonResult> OnGetBuscarProveedoresAsync(string query)
+        {
+            if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
+                return new JsonResult(new List<object>());
+
+            string t = query.Trim().ToLower();
+
+            var resultados = await _context.Proveedores
+                .Where(p => p.Estado && (p.NumDocumento.ToLower().Contains(t) || p.RazonSocial.ToLower().Contains(t)))
+                .Take(10)
+                .Select(p => new
+                {
+                    proveedorID = p.ProveedorID,
+                    numDocumento = p.NumDocumento,
+                    razonSocial = p.RazonSocial,
+                    monedaHabitual = p.MonedaHabitual,
+                    formaPagoHabitual = p.FormaPagoHabitual
+                })
+                .AsNoTracking()
+                .ToListAsync();
+
+            return new JsonResult(resultados);
+        }
+
+        // HANDLER AJAX: CREAR PROVEEDOR EXPRESS
+        public async Task<JsonResult> OnPostCrearProveedorExpressAsync([FromBody] Proveedor nuevoProv)
+        {
+            if (string.IsNullOrWhiteSpace(nuevoProv.NumDocumento) || string.IsNullOrWhiteSpace(nuevoProv.RazonSocial))
+            {
+                return new JsonResult(new { success = false, message = "El RUC/Documento y la Razón Social son requeridos." });
+            }
+
+            bool existe = await _context.Proveedores.AnyAsync(p => p.NumDocumento == nuevoProv.NumDocumento);
+            if (existe)
+            {
+                var provExistente = await _context.Proveedores.FirstOrDefaultAsync(p => p.NumDocumento == nuevoProv.NumDocumento);
+                return new JsonResult(new { success = true, proveedor = provExistente, message = "El proveedor ya existía y fue seleccionado." });
+            }
+
+            nuevoProv.Estado = true;
+            nuevoProv.FechaRegistro = DateTime.Now;
+
+            _context.Proveedores.Add(nuevoProv);
+            await _context.SaveChangesAsync();
+
+            return new JsonResult(new { success = true, proveedor = nuevoProv });
+        }
+
+        // HANDLER AJAX: CONSULTAR SUNAT VÍA OPENRUC
+        public async Task<JsonResult> OnGetConsultarRucAsync(string ruc)
+        {
+            if (string.IsNullOrWhiteSpace(ruc) || ruc.Length != 11)
+            {
+                return new JsonResult(new { success = false, message = "El RUC debe contener exactamente 11 dígitos." });
+            }
+
+            try
+            {
+                using var httpClient = new HttpClient();
+                httpClient.DefaultRequestHeaders.Add("User-Agent", "ERP-System-App");
+
+                var response = await httpClient.GetAsync($"https://openruc.com/api/ruc/{ruc}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var data = await response.Content.ReadFromJsonAsync<OpenRucDTO>();
+                    if (data != null && !string.IsNullOrWhiteSpace(data.RazonSocial))
+                    {
+                        return new JsonResult(new
+                        {
+                            success = true,
+                            razonSocial = data.RazonSocial,
+                            direccion = data.Direccion,
+                            ubigeoID = data.Ubigeo
+                        });
+                    }
+                }
+                return new JsonResult(new { success = false, message = "No se encontraron datos en SUNAT." });
+            }
+            catch (Exception ex)
+            {
+                return new JsonResult(new { success = false, message = $"Error de consulta: {ex.Message}" });
+            }
         }
 
         public async Task<IActionResult> OnPostGuardarOCAsync()
@@ -84,7 +170,6 @@ namespace ERP.WEB.Pages.Compras
                 return RedirectToPage(new { requerimientoId = InputOC.RequerimientoID });
             }
 
-            // Calcular totales
             decimal subTotal = detallesDTO.Sum(d => d.Cantidad * d.PrecioUnitario);
             decimal igv = subTotal * 0.18m;
             decimal total = subTotal + igv;
@@ -97,7 +182,6 @@ namespace ERP.WEB.Pages.Compras
             _context.OrdenesCompraCabecera.Add(InputOC);
             await _context.SaveChangesAsync();
 
-            // Guardar detalles de la OC
             foreach (var item in detallesDTO)
             {
                 _context.OrdenesCompraDetalle.Add(new OrdenesCompraDetalle
@@ -112,7 +196,6 @@ namespace ERP.WEB.Pages.Compras
                 });
             }
 
-            // Actualizar estado del Requerimiento origen a "Atendido" o "En Proceso"
             var reqOrigen = await _context.RequerimientosCabecera.FindAsync(InputOC.RequerimientoID);
             if (reqOrigen != null)
             {
@@ -133,6 +216,18 @@ namespace ERP.WEB.Pages.Compras
             public decimal Cantidad { get; set; }
             public string UnidadMedida { get; set; } = "UND";
             public decimal PrecioUnitario { get; set; }
+        }
+
+        public class OpenRucDTO
+        {
+            [JsonPropertyName("razon_social")]
+            public string RazonSocial { get; set; } = string.Empty;
+
+            [JsonPropertyName("direccion")]
+            public string Direccion { get; set; } = string.Empty;
+
+            [JsonPropertyName("ubigeo")]
+            public string Ubigeo { get; set; } = string.Empty;
         }
     }
 }
