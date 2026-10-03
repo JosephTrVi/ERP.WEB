@@ -169,25 +169,40 @@ namespace ERP.WEB.Pages.Solicitudes
                 return Page();
             }
 
-            InputRequerimiento.SolicitanteID = 1; // Asignar según usuario autenticado
+            InputRequerimiento.SolicitanteID = 1;
             InputRequerimiento.FechaSolicitud = DateTime.Now;
             InputRequerimiento.Estado = "Pendiente";
 
             _context.RequerimientosCabecera.Add(InputRequerimiento);
             await _context.SaveChangesAsync();
 
-            var listaItems = JsonSerializer.Deserialize<List<DetalleDTO>>(ItemsJson);
+            var listaItems = JsonSerializer.Deserialize<List<DetalleDTO>>(ItemsJson, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
             if (listaItems != null)
             {
                 foreach (var item in listaItems)
                 {
+                    // Si por alguna razón el nombre viene vacío, obtenerlo de la BD usando el ProductoID
+                    string nombreFinal = item.Nombre;
+                    if (string.IsNullOrWhiteSpace(nombreFinal) && item.ProductoID > 0)
+                    {
+                        var prod = await _context.Productos.FindAsync(item.ProductoID);
+                        if (prod != null)
+                        {
+                            nombreFinal = prod.Nombre;
+                        }
+                    }
+
                     _context.RequerimientosDetalle.Add(new RequerimientoDetalle
                     {
                         RequerimientoID = InputRequerimiento.RequerimientoID,
-                        ProductoID = item.ProductoID,
-                        DescripcionItem = item.Nombre,
+                        ProductoID = item.ProductoID > 0 ? item.ProductoID : null,
+                        DescripcionItem = string.IsNullOrWhiteSpace(nombreFinal) ? "Artículo / Servicio" : nombreFinal,
                         Cantidad = item.Cantidad,
-                        UnidadMedida = item.UnidadMedida,
+                        UnidadMedida = string.IsNullOrWhiteSpace(item.UnidadMedida) ? "UND" : item.UnidadMedida,
                         EspecificacionesTecnicas = item.Observaciones,
                         EstadoItem = "Pendiente"
                     });
@@ -196,13 +211,13 @@ namespace ERP.WEB.Pages.Solicitudes
             }
 
             MensajeExito = $"Requerimiento {InputRequerimiento.Codigo} registrado correctamente.";
-            return RedirectToPage("/Index");
+            return RedirectToPage("/Solicitudes/Index");
         }
 
         public class DetalleDTO
         {
             public int ProductoID { get; set; }
-            public string Nombre { get; set; } = string.Empty;
+            public string Nombre { get; set; } = string.Empty; // <-- A veces viene como 'nombre' o 'descripcion'
             public string UnidadMedida { get; set; } = "UND";
             public decimal Cantidad { get; set; }
             public string? Observaciones { get; set; }

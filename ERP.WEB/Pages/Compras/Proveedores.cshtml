@@ -1,0 +1,347 @@
+﻿@page
+@model ERP.WEB.Pages.Compras.ProveedoresModel
+@{
+    ViewData["Title"] = "Gestión de Proveedores";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold text-dark mb-0"><i class="bi bi-truck me-2 text-primary"></i>Catálogo de Proveedores</h4>
+        <small class="text-muted">Registro y control de proveedores nacionales e internacionales</small>
+    </div>
+    <button type="button" class="btn btn-success fw-semibold shadow-sm" onclick="abrirModalProveedor(0)">
+        <i class="bi bi-plus-lg me-1"></i> Nuevo Proveedor
+    </button>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+    <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-check-circle me-1"></i> @Model.MensajeExito
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i> @Model.MensajeError
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Documento</th>
+                        <th>Razón Social / Nombre</th>
+                        <th>Origen / País</th>
+                        <th>Contacto</th>
+                        <th>Atributos Tributarios (Perú)</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-end">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.ListaProveedores.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-truck fs-2 d-block mb-2"></i> No existen proveedores registrados.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var p in Model.ListaProveedores)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="badge bg-light text-dark border">@p.TipoDocumento</span>
+                                    <div class="fw-bold text-primary">@p.NumDocumento</div>
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark">@p.RazonSocial</div>
+                                    @if (!string.IsNullOrEmpty(p.NombreComercial))
+                                    {
+                                        <small class="text-muted">@p.NombreComercial</small>
+                                    }
+                                </td>
+                                <td>
+                                    @if (p.TipoProveedor == "Nacional")
+                                    {
+                                        <span class="badge bg-primary">🇵🇪 Perú (Nacional)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-info text-dark">🌐 Extranjero (@p.PaisCodigo)</span>
+                                    }
+                                </td>
+                                <td>
+                                    <small class="d-block"><i class="bi bi-telephone me-1"></i>@(p.Telefono ?? "-")</small>
+                                    <small class="d-block text-muted"><i class="bi bi-envelope me-1"></i>@(p.EmailContacto ?? "-")</small>
+                                </td>
+                                <td>
+                                    @if (p.EsAgenteRetencion)
+                                    {
+                                        <span class="badge bg-warning text-dark me-1" title="Agente de Retención">A. Retención</span>
+                                    }
+                                    @if (p.EsAgentePercepcion)
+                                    {
+                                        <span class="badge bg-danger me-1" title="Agente de Percepción">A. Percepción</span>
+                                    }
+                                    @if (p.EsBuenContribuyente)
+                                    {
+                                        <span class="badge bg-success me-1">Buen Contrib.</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (p.Estado)
+                                    {
+                                        <span class="badge bg-success">Activo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Inactivo</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-primary" onclick='editarProveedor(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(p)))'>
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL REGISTRO DE PROVEEDOR -->
+<div class="modal fade" id="modalProveedor" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold" id="modalTituloProv"><i class="bi bi-truck me-2"></i> Registrar Proveedor</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" asp-page-handler="Guardar">
+                <input type="hidden" asp-for="InputProveedor.ProveedorID" id="txtProveedorID" />
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Tipo Proveedor <span class="text-danger">*</span></label>
+                            <select class="form-select" asp-for="InputProveedor.TipoProveedor" id="ddlTipoProveedor" onchange="cambiarTipoProveedor()" required>
+                                <option value="Nacional">📦 Nacional (Perú)</option>
+                                <option value="Extranjero">🌐 Extranjero (Importación)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Tipo Documento <span class="text-danger">*</span></label>
+                            <select class="form-select" asp-for="InputProveedor.TipoDocumento" id="ddlTipoDoc" required>
+                                <option value="RUC">RUC</option>
+                                <option value="TaxID">Tax ID (EE.UU.)</option>
+                                <option value="VAT">VAT / NIF (Europa)</option>
+                                <option value="Pasaporte">Pasaporte / Otro</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">N° Documento / Tax ID <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control fw-bold" asp-for="InputProveedor.NumDocumento" id="txtNumDoc" required />
+                        </div>
+
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">Razón Social / Empresa <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" asp-for="InputProveedor.RazonSocial" id="txtRazonSocial" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Nombre Comercial</label>
+                            <input type="text" class="form-control" asp-for="InputProveedor.NombreComercial" id="txtNombreComercial" />
+                        </div>
+
+                        <!-- SECCIÓN DIRECCIÓN Y UBICACIÓN -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">País <span class="text-danger">*</span></label>
+                            <select class="form-select" asp-for="InputProveedor.PaisCodigo" id="ddlPais" onchange="cambiarTipoProveedor()">
+                                <option value="PER" selected>Perú</option>
+                                <option value="USA">Estados Unidos</option>
+                                <option value="CHN">China</option>
+                                <option value="DEU">Alemania</option>
+                                <option value="MEX">México</option>
+                                <option value="BRA">Brasil</option>
+                                <option value="COL">Colombia</option>
+                                <option value="ESP">España</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-8" id="secUbigeoPeru">
+                            <label class="form-label fw-semibold">Ubigeo Perú (Distrito/Provincia)</label>
+                            <input type="text" class="form-control" id="txtUbigeoBusqueda" placeholder="Buscar distrito..." onkeyup="buscarUbigeo(this.value)" />
+                            <input type="hidden" asp-for="InputProveedor.UbigeoID" id="txtUbigeoID" />
+                            <small id="lblUbigeoSeleccionado" class="text-primary fw-bold d-block mt-1"></small>
+                            <div id="divResultadosUbigeo" class="list-group position-absolute shadow" style="z-index:1000; max-height:150px; overflow-y:auto; display:none;"></div>
+                        </div>
+
+                        <div class="col-md-4 d-none" id="secEstadoExtranjero">
+                            <label class="form-label fw-semibold">Estado / Ciudad Extranjera</label>
+                            <input type="text" class="form-control" asp-for="InputProveedor.CiudadEstadoExtranjero" id="txtEstadoExtranjero" placeholder="Ej: Florida, Miami" />
+                        </div>
+                        <div class="col-md-4 d-none" id="secZipExtranjero">
+                            <label class="form-label fw-semibold">Código Postal / ZIP Code</label>
+                            <input type="text" class="form-control" asp-for="InputProveedor.CodigoPostal" id="txtZipExtranjero" placeholder="Ej: 33101" />
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Dirección Fiscal / Despacho <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" asp-for="InputProveedor.Direccion" id="txtDireccion" required />
+                        </div>
+
+                        <!-- SECCIÓN TRIBUTARIA SUNAT (SOLO PERÚ) -->
+                        <div class="col-12 bg-light p-3 rounded border" id="secSunatPeru">
+                            <h6 class="fw-bold text-dark mb-2"><i class="bi bi-shield-check me-1 text-primary"></i> Atributos Tributarios (SUNAT - Perú)</h6>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" asp-for="InputProveedor.EsAgenteRetencion" id="chkRetencion">
+                                        <label class="form-check-label fw-semibold" for="chkRetencion">Agente de Retención (3%)</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" asp-for="InputProveedor.EsAgentePercepcion" id="chkPercepcion">
+                                        <label class="form-check-label fw-semibold" for="chkPercepcion">Agente de Percepción</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" asp-for="InputProveedor.EsBuenContribuyente" id="chkBuenContrib">
+                                        <label class="form-check-label fw-semibold" for="chkBuenContrib">Buen Contribuyente</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CONTACTO & MONEDA HABITUAL -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Teléfono</label>
+                            <input type="text" class="form-control" asp-for="InputProveedor.Telefono" id="txtTelefono" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Email Contacto</label>
+                            <input type="email" class="form-control" asp-for="InputProveedor.EmailContacto" id="txtEmail" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Moneda Operación</label>
+                            <select class="form-select" asp-for="InputProveedor.MonedaHabitual" id="ddlMoneda">
+                                <option value="PEN">S/ - Soles</option>
+                                <option value="USD">$ - Dólares</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success fw-semibold"><i class="bi bi-save me-1"></i> Guardar Proveedor</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function abrirModalProveedor(id) {
+            document.getElementById('txtProveedorID').value = 0;
+            document.getElementById('ddlTipoProveedor').value = "Nacional";
+            document.getElementById('ddlTipoDoc').value = "RUC";
+            document.getElementById('txtNumDoc').value = "";
+            document.getElementById('txtRazonSocial').value = "";
+            document.getElementById('txtNombreComercial').value = "";
+            document.getElementById('ddlPais').value = "PER";
+            document.getElementById('txtDireccion').value = "";
+            document.getElementById('txtUbigeoID').value = "";
+            document.getElementById('lblUbigeoSeleccionado').innerText = "";
+            document.getElementById('chkRetencion').checked = false;
+            document.getElementById('chkPercepcion').checked = false;
+            document.getElementById('chkBuenContrib').checked = false;
+
+            cambiarTipoProveedor();
+            const modal = new bootstrap.Modal(document.getElementById('modalProveedor'));
+            modal.show();
+        }
+
+        function cambiarTipoProveedor() {
+            const tipo = document.getElementById('ddlTipoProveedor').value;
+            const pais = document.getElementById('ddlPais').value;
+
+            if (tipo === "Nacional" || pais === "PER") {
+                document.getElementById('secUbigeoPeru').classList.remove('d-none');
+                document.getElementById('secSunatPeru').classList.remove('d-none');
+                document.getElementById('secEstadoExtranjero').classList.add('d-none');
+                document.getElementById('secZipExtranjero').classList.add('d-none');
+            } else {
+                document.getElementById('secUbigeoPeru').classList.add('d-none');
+                document.getElementById('secSunatPeru').classList.add('d-none');
+                document.getElementById('secEstadoExtranjero').classList.remove('d-none');
+                document.getElementById('secZipExtranjero').classList.remove('d-none');
+            }
+        }
+
+        async function buscarUbigeo(term) {
+            const div = document.getElementById('divResultadosUbigeo');
+            if (!term || term.length < 3) {
+                div.style.display = 'none';
+                return;
+            }
+
+            const res = await fetch(`?handler=BuscarUbigeo&term=${encodeURIComponent(term)}`);
+            if (res.ok) {
+                const lista = await res.json();
+                if (lista.length === 0) {
+                    div.style.display = 'none';
+                    return;
+                }
+
+                let html = '';
+                lista.forEach(u => {
+                    html += `<button type="button" class="list-group-item list-group-item-action py-1 px-2 small" onclick="seleccionarUbigeo('${u.ubigeoID}', '${u.departamento} / ${u.provincia} / ${u.distrito}')">
+                        <strong>${u.ubigeoID}</strong> - ${u.departamento} / ${u.provincia} / ${u.distrito}
+                    </button>`;
+                });
+
+                div.innerHTML = html;
+                div.style.display = 'block';
+            }
+        }
+
+        function seleccionarUbigeo(id, texto) {
+            document.getElementById('txtUbigeoID').value = id;
+            document.getElementById('lblUbigeoSeleccionado').innerText = `Seleccionado: ${id} - ${texto}`;
+            document.getElementById('divResultadosUbigeo').style.display = 'none';
+            document.getElementById('txtUbigeoBusqueda').value = '';
+        }
+
+        function editarProveedor(p) {
+            document.getElementById('txtProveedorID').value = p.ProveedorID || p.proveedorID;
+            document.getElementById('ddlTipoProveedor').value = p.TipoProveedor || p.tipoProveedor || "Nacional";
+            document.getElementById('ddlTipoDoc').value = p.TipoDocumento || p.tipoDocumento || "RUC";
+            document.getElementById('txtNumDoc').value = p.NumDocumento || p.numDocumento;
+            document.getElementById('txtRazonSocial').value = p.RazonSocial || p.razonSocial;
+            document.getElementById('txtNombreComercial').value = p.NombreComercial || p.nombreComercial || "";
+            document.getElementById('ddlPais').value = p.PaisCodigo || p.paisCodigo || "PER";
+            document.getElementById('txtDireccion').value = p.Direccion || p.direccion;
+            document.getElementById('txtUbigeoID').value = p.UbigeoID || p.ubigeoID || "";
+            document.getElementById('chkRetencion').checked = p.EsAgenteRetencion || p.esAgenteRetencion || false;
+            document.getElementById('chkPercepcion').checked = p.EsAgentePercepcion || p.esAgentePercepcion || false;
+            document.getElementById('chkBuenContrib').checked = p.EsBuenContribuyente || p.esBuenContribuyente || false;
+
+            cambiarTipoProveedor();
+            const modal = new bootstrap.Modal(document.getElementById('modalProveedor'));
+            modal.show();
+        }
+    </script>
+}

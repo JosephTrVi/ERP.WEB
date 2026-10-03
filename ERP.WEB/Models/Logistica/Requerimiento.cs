@@ -8,7 +8,8 @@ namespace ERP.WEB.Models.Logistica
     {
         [Key]
         public int RequerimientoID { get; set; }
-
+        // Campos adicionales de trazabilidad de aprobación en RequerimientosCabecera
+        public int? AprobadorID { get; set; }
         [Required]
         [StringLength(20)]
         public string Codigo { get; set; } = string.Empty;
@@ -37,6 +38,13 @@ namespace ERP.WEB.Models.Logistica
         [Required]
         [StringLength(20)]
         public string Estado { get; set; } = "Pendiente";
+
+        // PROPIEDADES DE APROBACIÓN (Asegúrate de que estén presentes)
+       
+        public DateTime? FechaAprobacion { get; set; }
+
+        [StringLength(255)]
+        public string? ComentarioAprobacion { get; set; }
 
         public virtual ICollection<RequerimientoDetalle> Detalles { get; set; } = new List<RequerimientoDetalle>();
     }

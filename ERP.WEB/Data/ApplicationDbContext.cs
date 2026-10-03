@@ -26,7 +26,9 @@ namespace ERP.WEB.Data
         // Logistica
         public DbSet<RequerimientoCabecera> RequerimientosCabecera { get; set; } = null!;
         public DbSet<RequerimientoDetalle> RequerimientosDetalle { get; set; } = null!;
-
+        public DbSet<OrdenesCompraCabecera> OrdenesCompraCabecera { get; set; } = null!;
+        public DbSet<OrdenesCompraDetalle> OrdenesCompraDetalle { get; set; } = null!;
+        public DbSet<Proveedor> Proveedores { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -120,6 +122,39 @@ namespace ERP.WEB.Data
                       .WithMany()
                       .HasForeignKey(d => d.ProductoID)
                       .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<OrdenesCompraCabecera>(entity =>
+            {
+                entity.ToTable("OrdenesCompraCabecera", "Compras");
+                entity.HasKey(e => e.OrdenCompraID);
+
+                entity.HasOne(o => o.Requerimiento)
+                      .WithMany()
+                      .HasForeignKey(o => o.RequerimientoID)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<OrdenesCompraDetalle>(entity =>
+            {
+                entity.ToTable("OrdenesCompraDetalle", "Compras");
+                entity.HasKey(e => e.OrdenCompraDetalleID);
+
+                entity.HasOne<OrdenesCompraCabecera>(d => d.OrdenCompra!)
+                      .WithMany(p => p.Detalles)
+                      .HasForeignKey(d => d.OrdenCompraID)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne<Producto>(d => d.Producto!)
+                      .WithMany()
+                      .HasForeignKey(d => d.ProductoID)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Proveedor>(entity =>
+            {
+                entity.ToTable("Proveedores", "Compras");
+                entity.HasKey(e => e.ProveedorID);
             });
         }
     }

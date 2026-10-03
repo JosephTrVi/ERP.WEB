@@ -1,0 +1,322 @@
+﻿@page
+@model ERP.WEB.Pages.Solicitudes.AprobacionesModel
+@{
+    ViewData["Title"] = "Aprobación de Requerimientos";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold text-dark mb-0"><i class="bi bi-check2-square me-2 text-primary"></i>Aprobación de Requerimientos</h4>
+        <small class="text-muted">Bandeja de revisión de solicitudes internas para Jefaturas de Área</small>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+    <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-check-circle me-1"></i> @Model.MensajeExito
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i> @Model.MensajeError
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- PESTAÑAS: PENDIENTES VS HISTORIAL -->
+<ul class="nav nav-tabs border-bottom mb-3" id="tabAprobaciones" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active fw-bold text-dark" id="tab-pendientes" data-bs-toggle="tab" data-bs-target="#pane-pendientes" type="button" role="tab">
+            <i class="bi bi-hourglass-split text-warning me-1"></i> Pendientes de Aprobación
+            <span class="badge bg-warning text-dark ms-2">@Model.ListaPendientes.Count</span>
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link fw-semibold text-secondary" id="tab-historial" data-bs-toggle="tab" data-bs-target="#pane-historial" type="button" role="tab">
+            <i class="bi bi-clock-history text-info me-1"></i> Historial Procesado
+            <span class="badge bg-secondary ms-1">@Model.ListaHistorial.Count</span>
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="contentAprobaciones">
+    <!-- PANE 1: SOLICITUDES PENDIENTES -->
+    <div class="tab-pane fade show active" id="pane-pendientes" role="tabpanel">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Código</th>
+                                <th>Tipo</th>
+                                <th>Prioridad</th>
+                                <th>Fecha Solicitud</th>
+                                <th>Fecha Requerida</th>
+                                <th class="text-center">Ítems</th>
+                                <th class="text-end">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!Model.ListaPendientes.Any())
+                            {
+                                <tr>
+                                    <td colspan="7" class="text-center py-5 text-muted">
+                                        <i class="bi bi-check-circle-fill fs-2 d-block text-success mb-2"></i>
+                                        No tiene solicitudes pendientes de aprobación.
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var req in Model.ListaPendientes)
+                                {
+                                    <tr>
+                                        <td class="fw-bold text-primary">@req.Codigo</td>
+                                        <td>
+                                            @if (req.TipoRequerimiento == "Nacional")
+                                            {
+                                                <span class="badge bg-light text-dark border">📦 Nacional</span>
+                                            }
+                                            else if (req.TipoRequerimiento == "Importacion")
+                                            {
+                                                <span class="badge bg-info text-dark">🚢 Importación</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning text-dark">🛠️ Servicio</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <span class="badge @(req.Prioridad == "Urgente" || req.Prioridad == "Alta" ? "bg-danger" : "bg-secondary")">@req.Prioridad</span>
+                                        </td>
+                                        <td><small class="text-muted">@req.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")</small></td>
+                                        <td><small class="fw-semibold text-dark">@req.FechaRequerida.ToString("dd/MM/yyyy")</small></td>
+                                        <td class="text-center">
+                                            <span class="badge rounded-pill bg-primary fw-bold">@req.Detalles.Count</span>
+                                        </td>
+                                        <td class="text-end">
+                                            <button class="btn btn-sm btn-primary fw-semibold" onclick='verDetallesRequerimiento(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(req, new System.Text.Json.JsonSerializerOptions { ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles })))'>
+                                                <i class="bi bi-search me-1"></i> Revisar y Procesar
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANE 2: HISTORIAL PROCESADO -->
+    <div class="tab-pane fade" id="pane-historial" role="tabpanel">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Código</th>
+                                <th>Tipo</th>
+                                <th>Fecha Aprobación</th>
+                                <th>Estado</th>
+                                <th>Observaciones / Justificación</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (!Model.ListaHistorial.Any())
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center py-5 text-muted">
+                                        <i class="bi bi-inbox fs-2 d-block mb-2"></i> Aún no se registra historial de aprobaciones.
+                                    </td>
+                                </tr>
+                            }
+                            else
+                            {
+                                @foreach (var h in Model.ListaHistorial)
+                                {
+                                    <tr>
+                                        <td class="fw-bold text-primary">@h.Codigo</td>
+                                        <td><small class="text-muted">@h.TipoRequerimiento</small></td>
+                                        <td><small class="text-dark fw-semibold">@(h.FechaAprobacion?.ToString("dd/MM/yyyy HH:mm") ?? "-")</small></td>
+                                        <td>
+                                            @if (h.Estado == "Aprobado")
+                                            {
+                                                <span class="badge bg-success">Aprobado</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger">Rechazado</span>
+                                            }
+                                        </td>
+                                        <td><small class="fst-italic text-muted">@(h.ComentarioAprobacion ?? "Sin comentarios.")</small></td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE REVISIÓN Y APROBACIÓN PARCIAL -->
+<div class="modal fade" id="modalRevisarReq" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold" id="modalTituloReq"><i class="bi bi-file-earmark-check me-2"></i> Revisar Requerimiento</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2 mb-3 bg-light p-3 rounded border">
+                    <div class="col-md-4"><small class="text-muted d-block">Tipo Solicitud:</small> <strong id="lblTipo"></strong></div>
+                    <div class="col-md-4"><small class="text-muted d-block">Prioridad:</small> <strong id="lblPrioridad"></strong></div>
+                    <div class="col-md-4"><small class="text-muted d-block">Fecha Requerida:</small> <strong id="lblFechaReq"></strong></div>
+                    <div class="col-12 mt-2"><small class="text-muted d-block">Sustento / Motivo:</small> <span id="lblSustento" class="fst-italic text-dark"></span></div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="fw-bold text-dark mb-0"><i class="bi bi-list-stars me-1 text-primary"></i> Ítems Solicitados (Puede ajustar la cantidad a autorizar)</h6>
+                </div>
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm table-bordered align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Artículo / Servicio</th>
+                                <th>U.M.</th>
+                                <th class="text-end" style="width: 130px;">Cant. Autorizada</th>
+                                <th>Especificaciones Técnicas</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyDetallesModal"></tbody>
+                    </table>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label fw-semibold">Comentario / Justificación de la Jefatura</label>
+                    <textarea class="form-control" id="txtComentarioProceso" rows="2" placeholder="Observaciones para el área de compras o motivo en caso de rechazo..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer bg-light d-flex justify-content-between">
+                <form method="post" id="formRechazar" asp-page-handler="Rechazar">
+                    <input type="hidden" name="requerimientoId" id="idReqRechazar" />
+                    <input type="hidden" name="comentario" id="comentarioRechazar" />
+                    <button type="button" class="btn btn-outline-danger fw-semibold" onclick="procesarAccion('Rechazar')">
+                        <i class="bi bi-x-circle me-1"></i> Rechazar Solicitud
+                    </button>
+                </form>
+
+                <form method="post" id="formAprobar" asp-page-handler="Aprobar">
+                    <input type="hidden" name="requerimientoId" id="idReqAprobar" />
+                    <input type="hidden" name="comentario" id="comentarioAprobar" />
+                    <input type="hidden" name="detallesJson" id="detallesJsonAprobar" />
+                    <button type="button" class="btn btn-success fw-semibold px-4" onclick="procesarAccion('Aprobar')">
+                        <i class="bi bi-check-circle me-1"></i> Aprobar y Transferir a Compras
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let reqSeleccionadoID = 0;
+        let detallesActuales = [];
+
+                function verDetallesRequerimiento(req) {
+            reqSeleccionadoID = req.RequerimientoID || req.requerimientoID || 0;
+            detallesActuales = req.Detalles || req.detalles || [];
+
+            document.getElementById('modalTituloReq').innerText = `Revisar Requerimiento ${req.Codigo || req.codigo || ''}`;
+            document.getElementById('lblTipo').innerText = req.TipoRequerimiento || req.tipoRequerimiento || '';
+            document.getElementById('lblPrioridad').innerText = req.Prioridad || req.prioridad || '';
+
+            const fechaReq = req.FechaRequerida || req.fechaRequerida;
+            document.getElementById('lblFechaReq').innerText = fechaReq ? fechaReq.substring(0, 10) : '';
+            document.getElementById('lblSustento').innerText = (req.Observaciones || req.observaciones) || 'Sin observaciones.';
+            document.getElementById('txtComentarioProceso').value = "";
+
+            const tbody = document.getElementById('tbodyDetallesModal');
+            tbody.innerHTML = '';
+
+            if (detallesActuales.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">No se encontraron ítems en esta solicitud.</td></tr>`;
+                return;
+            }
+
+            detallesActuales.forEach((d) => {
+                const id = d.RequerimientoDetalleID || d.requerimientoDetalleID || d.DetalleID || d.detalleID || 0;
+
+                // Obtener la entidad Producto vinculada si existe
+                const prod = d.Producto || d.producto || d.PRODUCTO;
+                const sku = prod ? (prod.SKU || prod.sku || '') : '';
+                const nombreProd = prod ? (prod.Nombre || prod.nombre || '') : '';
+
+                // Buscar la descripción por cualquiera de las llaves posibles
+                let descripcion = d.DescripcionItem || d.descripcionItem || d.descripcion || nombreProd;
+
+                if (!descripcion || descripcion.trim() === "" || descripcion === "null") {
+                    descripcion = "Artículo sin descripción";
+                }
+
+                const um = d.UnidadMedida || d.unidadMedida || (prod ? (prod.UnidadMedida || prod.unidadMedida) : 'UND');
+                const cantidad = d.Cantidad !== undefined ? d.Cantidad : (d.cantidad !== undefined ? d.cantidad : 0);
+                const especificaciones = d.EspecificacionesTecnicas || d.especificacionesTecnicas || '-';
+
+                const displayNombre = sku
+                    ? `<code class="me-1 text-primary fw-bold">[${sku}]</code> <strong>${descripcion}</strong>`
+                    : `<strong>${descripcion}</strong>`;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="text-dark">${displayNombre}</td>
+                        <td><span class="badge bg-secondary">${um}</span></td>
+                        <td>
+                            <input type="number" step="0.01" min="0.01" class="form-control form-control-sm text-end fw-bold text-primary input-cant" data-id="${id}" value="${cantidad}" />
+                        </td>
+                        <td><small class="text-muted">${especificaciones}</small></td>
+                    </tr>`;
+            });
+
+            const modal = new bootstrap.Modal(document.getElementById('modalRevisarReq'));
+            modal.show();
+        }
+
+        function procesarAccion(accion) {
+            const comentario = document.getElementById('txtComentarioProceso').value;
+
+            if (accion === 'Rechazar') {
+                if (!comentario.trim()) {
+                    alert("Debe ingresar un comentario explícito para justificar el rechazo.");
+                    return;
+                }
+                document.getElementById('idReqRechazar').value = reqSeleccionadoID;
+                document.getElementById('comentarioRechazar').value = comentario;
+                document.getElementById('formRechazar').submit();
+            } else {
+                const inputs = document.querySelectorAll('.input-cant');
+                const cambios = [];
+                inputs.forEach(inp => {
+                    cambios.push({
+                        DetalleID: parseInt(inp.getAttribute('data-id')),
+                        NuevaCantidad: parseFloat(inp.value) || 1
+                    });
+                });
+
+                document.getElementById('idReqAprobar').value = reqSeleccionadoID;
+                document.getElementById('comentarioAprobar').value = comentario;
+                document.getElementById('detallesJsonAprobar').value = JSON.stringify(cambios);
+                document.getElementById('formAprobar').submit();
+            }
+        }
+    </script>
+}

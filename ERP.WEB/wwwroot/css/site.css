@@ -140,3 +140,46 @@ body {
             background-color: transparent;
             font-weight: 600;
         }
+/* Estilos para el Menú Lateral Estructurado */
+.sidebar-menu .accordion-button {
+    color: rgba(255, 255, 255, 0.85) !important;
+    font-size: 0.9rem;
+    border-radius: 6px;
+    transition: background-color 0.2s ease;
+}
+
+    .sidebar-menu .accordion-button:not(.collapsed) {
+        background-color: rgba(255, 255, 255, 0.08) !important;
+        color: #ffffff !important;
+        box-shadow: none;
+    }
+
+    .sidebar-menu .accordion-button::after {
+        filter: invert(1);
+        transform: scale(0.7);
+    }
+
+.sidebar-menu .nav-link {
+    font-size: 0.82rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+    .sidebar-menu .nav-link:hover:not(.disabled) {
+        color: #ffffff !important;
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .sidebar-menu .nav-link.disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
+.fs-7 {
+    font-size: 0.82rem;
+}
+
+.fs-8 {
+    font-size: 0.72rem;
+}

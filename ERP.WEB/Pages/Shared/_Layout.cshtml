@@ -1,246 +1,333 @@
-﻿<!DOCTYPE html>
+﻿@{
+    // Obtener la ruta de la página actual para expandir el acordeón correspondiente
+    string pagePath = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
+
+    bool esSolicitudes = pagePath.StartsWith("/Solicitudes");
+    bool esAlmacen = pagePath.StartsWith("/Almacen");
+    bool esLogistica = pagePath.StartsWith("/Compras");
+    bool esSeguridad = pagePath.StartsWith("/Seguridad") || pagePath.StartsWith("/Sistemas");
+}
+
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - ERP PLANTA</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <title>@ViewData["Title"] - Enterprise ERP</title>
+
+    <!-- BOOTSTRAP 5 & ICONS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" />
+
+    <!-- ESTILOS PROPIOS -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-</head>
-<body>
 
-    <!-- BARRA LATERAL FIJA (SIDEBAR) -->
-    <aside class="sidebar shadow-sm" id="sidebar">
-        <div class="brand-header">
-            <a class="text-white text-decoration-none fw-bold fs-5 d-flex align-items-center" asp-page="/Index">
-                <i class="bi bi-gear-wide-connected text-primary me-2 fs-4"></i>
-                <span>ERP PLANTA</span>
-            </a>
-        </div>
-
-        <div class="py-2">
-            <!-- GENERAL -->
-            <div class="sidebar-heading">Principal</div>
-            <ul class="nav flex-column">
-                <li class="nav-item">
-                    <a class="nav-link" asp-page="/Index">
-                        <i class="bi bi-speedometer2 me-2"></i> Dashboard
-                    </a>
-                </li>
-            </ul>
-
-            <!-- MÓDULO INDEPENDIENTE / TRANSVERSAL -->
-            <div class="sidebar-heading">Solicitudes</div>
-            <ul class="nav flex-column">
-                <li class="nav-item">
-                    <a class="nav-link" asp-page="/Solicitudes/NuevoRequerimiento">
-                        <i class="bi bi-file-earmark-plus me-2"></i> Mis Requerimientos
-                    </a>
-                </li>
-            </ul>
-
-            <!-- MÓDULOS DE ÁREAS (DESPLEGABLES TIPO ACORDEÓN) -->
-            <div class="sidebar-heading">Áreas de Trabajo</div>
-            <!-- Se agregó id="accordionSidebar" a la lista -->
-            <ul class="nav flex-column" id="accordionSidebar">
-
-                <!-- 1. SEGURIDAD -->
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="collapse" href="#menuSeguridad" role="button" aria-expanded="false">
-                        <i class="bi bi-shield-lock me-2 text-warning"></i>
-                        <span>Seguridad</span>
-                        <i class="bi bi-chevron-down chevron-icon"></i>
-                    </a>
-                    <!-- Se agregó data-bs-parent="#accordionSidebar" -->
-                    <div class="collapse" id="menuSeguridad" data-bs-parent="#accordionSidebar">
-                        <ul class="nav flex-column submenu">
-                            <li class="nav-item">
-                                <a class="nav-link" asp-page="/Seguridad/Usuarios">
-                                    <i class="bi bi-people me-2"></i> Usuarios
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-page="/Seguridad/Permisos">
-                                    <i class="bi bi-key me-2"></i> Permisos y Roles
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
-
-                <!-- 2. RECURSOS HUMANOS -->
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="collapse" href="#menuRRHH" role="button" aria-expanded="false">
-                        <i class="bi bi-people-fill me-2 text-info"></i>
-                        <span>Recursos Humanos</span>
-                        <i class="bi bi-chevron-down chevron-icon"></i>
-                    </a>
-                    <!-- Se agregó data-bs-parent="#accordionSidebar" -->
-                    <div class="collapse" id="menuRRHH" data-bs-parent="#accordionSidebar">
-                        <ul class="nav flex-column submenu">
-                            <li class="nav-item">
-                                <a class="nav-link disabled" href="#">
-                                    <i class="bi bi-person-badge me-2"></i> Gestión Empleados
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link disabled" href="#">
-                                    <i class="bi bi-building me-2"></i> Áreas de Trabajo
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
-
-                <!-- 3. ALMACÉN E INVENTARIO -->
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="collapse" href="#menuAlmacen" role="button" aria-expanded="false">
-                        <i class="bi bi-box-seam me-2 text-success"></i>
-                        <span>Almacén e Inventario</span>
-                        <i class="bi bi-chevron-down chevron-icon"></i>
-                    </a>
-                    <div class="collapse" id="menuAlmacen" data-bs-parent="#accordionSidebar">
-                        <ul class="nav flex-column submenu">
-                            <li class="nav-item">
-                                <a class="nav-link" asp-page="/Almacen/Categorias">
-                                    <i class="bi bi-folder-symlink me-2"></i> Categorías / SubCat.
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" asp-page="/Almacen/Articulos">
-                                    <i class="bi bi-tags me-2"></i> Catálogo Artículos
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link disabled" href="#">
-                                    <i class="bi bi-journal-bookmark me-2"></i> Movimientos Kárdex
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
-
-                <!-- 4. LOGÍSTICA Y COMPRAS -->
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="collapse" href="#menuLogistica" role="button" aria-expanded="false">
-                        <i class="bi bi-cart-check me-2 text-primary"></i>
-                        <span>Logística y Compras</span>
-                        <i class="bi bi-chevron-down chevron-icon"></i>
-                    </a>
-                    <!-- Se agregó data-bs-parent="#accordionSidebar" -->
-                    <div class="collapse" id="menuLogistica" data-bs-parent="#accordionSidebar">
-                        <ul class="nav flex-column submenu">
-                            <li class="nav-item">
-                                <a class="nav-link disabled" href="#">
-                                    <i class="bi bi-clipboard-check me-2"></i> Requerimientos Aprobados
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link disabled" href="#">
-                                    <i class="bi bi-file-earmark-spreadsheet me-2"></i> Órdenes de Compra
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
-
-                <!-- 5. PRODUCCIÓN -->
-                <li class="nav-item">
-                    <a class="nav-link" data-bs-toggle="collapse" href="#menuProduccion" role="button" aria-expanded="false">
-                        <i class="bi bi-tools me-2 text-danger"></i>
-                        <span>Producción</span>
-                        <i class="bi bi-chevron-down chevron-icon"></i>
-                    </a>
-                    <!-- Se agregó data-bs-parent="#accordionSidebar" -->
-                    <div class="collapse" id="menuProduccion" data-bs-parent="#accordionSidebar">
-                        <ul class="nav flex-column submenu">
-                            <li class="nav-item">
-                                <a class="nav-link disabled" href="#">
-                                    <i class="bi bi-gear-fill me-2"></i> Órdenes de Producción
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
-
-            </ul>
-        </div>
-    </aside>
-
-    <!-- BARRA SUPERIOR (TOPBAR) -->
-    <header class="topbar justify-content-between">
-        <div class="d-flex align-items-center">
-            <button class="btn btn-light d-lg-none me-2" type="button" onclick="toggleSidebar()">
-                <i class="bi bi-list fs-4"></i>
-            </button>
-            <h6 class="mb-0 text-muted fw-semibold">@ViewData["Title"]</h6>
-        </div>
-
-        <!-- PERFIL DE USUARIO Y LOGOUT -->
-        <div class="d-flex align-items-center">
-            @if (User.Identity?.IsAuthenticated ?? false)
-            {
-                <div class="dropdown">
-                    <button class="btn btn-light dropdown-toggle border-0 d-flex align-items-center" type="button" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-person-circle text-primary fs-5 me-2"></i>
-                        <span class="fw-semibold me-1">@(User.FindFirst("NombreEmpleado")?.Value ?? User.Identity.Name)</span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" aria-labelledby="userMenu">
-                        <li>
-                            <span class="dropdown-item-text text-muted small">
-                                Rol: <strong>@(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Usuario")</strong>
-                            </span>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <form method="post" asp-page="/Account/Logout">
-                                <button type="submit" class="dropdown-item text-danger">
-                                    <i class="bi bi-box-arrow-right me-2"></i> Cerrar Sesión
-                                </button>
-                            </form>
-                        </li>
-                    </ul>
-                </div>
-            }
-        </div>
-    </header>
-
-    <!-- CONTENIDO PRINCIPAL -->
-    <main class="main-content">
-        @RenderBody()
-    </main>
-
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('show');
+    <style>
+        body {
+            min-height: 100vh;
+            background-color: #f8f9fa;
         }
 
-        // Script para desplegar el menú activo
-        document.addEventListener("DOMContentLoaded", function () {
-            const currentPath = window.location.pathname.toLowerCase();
-            const navLinks = document.querySelectorAll('.sidebar .submenu .nav-link, .sidebar > .py-2 > .nav > .nav-item > .nav-link');
+        #wrapper {
+            display: flex;
+            width: 100%;
+            align-items: stretch;
+        }
 
-            navLinks.forEach(link => {
-                const href = link.getAttribute('href');
-                if (href && href !== '#' && currentPath.includes(href.toLowerCase())) {
-                    link.classList.add('active');
+        #sidebar {
+            min-width: 260px;
+            max-width: 260px;
+            background-color: #1a1d20;
+            color: #fff;
+            transition: all 0.3s;
+            min-height: 100vh;
+        }
 
-                    // Desplegar el menú padre correspondiente
-                    const parentCollapse = link.closest('.collapse');
-                    if (parentCollapse) {
-                        parentCollapse.classList.add('show');
-                        const toggleTrigger = document.querySelector(`[href="#${parentCollapse.id}"]`);
-                        if (toggleTrigger) {
-                            toggleTrigger.setAttribute('aria-expanded', 'true');
-                            toggleTrigger.classList.add('active');
-                        }
-                    }
-                }
-            });
-        });
-    </script>
+        #content {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ESTILOS PERSONALIZADOS DEL MENÚ POR ÁREAS */
+        .sidebar-menu .accordion-button {
+            color: rgba(255, 255, 255, 0.85) !important;
+            font-size: 0.9rem;
+            border-radius: 6px;
+            transition: background-color 0.2s ease;
+        }
+
+            .sidebar-menu .accordion-button:not(.collapsed) {
+                background-color: rgba(255, 255, 255, 0.08) !important;
+                color: #ffffff !important;
+                box-shadow: none;
+            }
+
+            .sidebar-menu .accordion-button::after {
+                filter: invert(1);
+                transform: scale(0.7);
+            }
+
+        .sidebar-menu .nav-link {
+            font-size: 0.82rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+
+            .sidebar-menu .nav-link:hover:not(.disabled) {
+                color: #ffffff !important;
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+
+            .sidebar-menu .nav-link.active-link {
+                color: #38bdf8 !important;
+                font-weight: 600;
+                background-color: rgba(56, 189, 248, 0.12);
+            }
+
+            .sidebar-menu .nav-link.disabled {
+                opacity: 0.4;
+                cursor: not-allowed;
+            }
+
+        .fs-7 {
+            font-size: 0.82rem;
+        }
+
+        .fs-8 {
+            font-size: 0.72rem;
+        }
+
+        .tracking-wider {
+            letter-spacing: 0.08em;
+        }
+    </style>
+</head>
+<body>
+    <div id="wrapper">
+        <!-- BARRA LATERAL (SIDEBAR) -->
+        <nav id="sidebar">
+            <!-- BRAND / HEADER -->
+            <div class="sidebar-brand d-flex align-items-center justify-content-center p-3 border-bottom border-secondary border-opacity-25">
+                <i class="bi bi-cpu-fill fs-3 text-primary me-2"></i>
+                <span class="fs-5 fw-bold text-white tracking-wide">ENTERPRISE <span class="text-primary">ERP</span></span>
+            </div>
+
+            <!-- MENÚ PRINCIPAL AGRUPADO POR ÁREAS -->
+            <div class="sidebar-menu p-2">
+                <div class="text-uppercase fs-8 fw-bold text-muted px-3 my-2 tracking-wider">Módulos Corporativos</div>
+
+                <div class="accordion accordion-flush" id="accordionSidebar">
+
+                    <!-- 1. SOLICITUDES & REQUERIMIENTOS -->
+                    <div class="accordion-item bg-transparent border-0">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button @(esSolicitudes ? "" : "collapsed") bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuSolicitudes" aria-expanded="@(esSolicitudes ? "true" : "false")">
+                                <i class="bi bi-file-earmark-text text-warning me-2 fs-6"></i>
+                                <span>Solicitudes</span>
+                            </button>
+                        </h2>
+                        <div id="menuSolicitudes" class="accordion-collapse collapse @(esSolicitudes ? "show" : "")" data-bs-parent="#accordionSidebar">
+                            <div class="accordion-body p-0 ps-4">
+                                <a asp-page="/Solicitudes/Index" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/Solicitudes/Index" ? "active-link" : "")">
+                                    <i class="bi bi-file-earmark-spread me-2"></i> Mis Requerimientos
+                                </a>
+                                <a asp-page="/Solicitudes/Aprobaciones" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/Solicitudes/Aprobaciones" ? "active-link" : "")">
+                                    <i class="bi bi-check2-square text-warning me-2"></i> Aprobar Requerimientos
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. ALMACÉN E INVENTARIO -->
+                    <div class="accordion-item bg-transparent border-0">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button @(esAlmacen ? "" : "collapsed") bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuAlmacen" aria-expanded="@(esAlmacen ? "true" : "false")">
+                                <i class="bi bi-box-seam text-success me-2 fs-6"></i>
+                                <span>Almacén</span>
+                            </button>
+                        </h2>
+                        <div id="menuAlmacen" class="accordion-collapse collapse @(esAlmacen ? "show" : "")" data-bs-parent="#accordionSidebar">
+                            <div class="accordion-body p-0 ps-4">
+                                <a asp-page="/Almacen/Categorias" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/Almacen/Categorias" ? "active-link" : "")">
+                                    <i class="bi bi-folder-symlink me-2"></i> Categorías / SubCat.
+                                </a>
+                                <a asp-page="/Almacen/Articulos" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/Almacen/Articulos" ? "active-link" : "")">
+                                    <i class="bi bi-tags me-2"></i> Catálogo de Artículos
+                                </a>
+                                <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
+                                    <i class="bi bi-journal-bookmark me-2"></i> Kárdex / Movimientos
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. LOGÍSTICA Y COMPRAS -->
+                    <div class="accordion-item bg-transparent border-0">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button @(esLogistica ? "" : "collapsed") bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuLogistica" aria-expanded="@(esLogistica ? "true" : "false")">
+                                <i class="bi bi-cart-check text-info me-2 fs-6"></i>
+                                <span>Logística & Compras</span>
+                            </button>
+                        </h2>
+                        <div id="menuLogistica" class="accordion-collapse collapse @(esLogistica ? "show" : "")" data-bs-parent="#accordionSidebar">
+                            <div class="accordion-body p-0 ps-4">
+                                <a asp-page="/Compras/BandejaRequerimientos" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/Compras/BandejaRequerimientos" ? "active-link" : "")">
+                                    <i class="bi bi-inbox me-2"></i> RQ Aprobados
+                                </a>
+                                <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
+                                    <i class="bi bi-receipt me-2"></i> Órdenes de Compra
+                                </a>
+                                <a asp-page="/Compras/Proveedores" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center">
+                                    <i class="bi bi-truck me-2"></i> Proveedores
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. VENTAS Y COMERCIAL -->
+                    <div class="accordion-item bg-transparent border-0">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuVentas">
+                                <i class="bi bi-graph-up-arrow text-primary me-2 fs-6"></i>
+                                <span>Ventas</span>
+                            </button>
+                        </h2>
+                        <div id="menuVentas" class="accordion-collapse collapse" data-bs-parent="#accordionSidebar">
+                            <div class="accordion-body p-0 ps-4">
+                                <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
+                                    <i class="bi bi-person-lines-fill me-2"></i> Clientes
+                                </a>
+                                <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
+                                    <i class="bi bi-file-earmark-spreadsheet me-2"></i> Cotizaciones / Pedidos
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 5. RECURSOS HUMANOS (RRHH) -->
+                    <div class="accordion-item bg-transparent border-0">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuRRHH">
+                                <i class="bi bi-people text-danger me-2 fs-6"></i>
+                                <span>Recursos Humanos</span>
+                            </button>
+                        </h2>
+                        <div id="menuRRHH" class="accordion-collapse collapse" data-bs-parent="#accordionSidebar">
+                            <div class="accordion-body p-0 ps-4">
+                                <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
+                                    <i class="bi bi-person-badge me-2"></i> Personal / Empleados
+                                </a>
+                                <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
+                                    <i class="bi bi-cash-stack me-2"></i> Planilla / Nómina
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 6. CONTABILIDAD -->
+                    <div class="accordion-item bg-transparent border-0">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuContabilidad">
+                                <i class="bi bi-calculator text-light me-2 fs-6"></i>
+                                <span>Contabilidad</span>
+                            </button>
+                        </h2>
+                        <div id="menuContabilidad" class="accordion-collapse collapse" data-bs-parent="#accordionSidebar">
+                            <div class="accordion-body p-0 ps-4">
+                                <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
+                                    <i class="bi bi-book me-2"></i> Plan Contable
+                                </a>
+                                <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
+                                    <i class="bi bi-file-bar-graph me-2"></i> Asientos / Libros
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 7. FINANZAS -->
+                    <div class="accordion-item bg-transparent border-0">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuFinanzas">
+                                <i class="bi bi-bank text-warning me-2 fs-6"></i>
+                                <span>Finanzas</span>
+                            </button>
+                        </h2>
+                        <div id="menuFinanzas" class="accordion-collapse collapse" data-bs-parent="#accordionSidebar">
+                            <div class="accordion-body p-0 ps-4">
+                                <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
+                                    <i class="bi bi-credit-card me-2"></i> Cuentas por Cobrar/Pagar
+                                </a>
+                                <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
+                                    <i class="bi bi-wallet2 me-2"></i> Caja & Bancos
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 8. SISTEMAS & SEGURIDAD -->
+                    <div class="accordion-item bg-transparent border-0">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button @(esSeguridad ? "" : "collapsed") bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuSistemas" aria-expanded="@(esSeguridad ? "true" : "false")">
+                                <i class="bi bi-shield-lock text-secondary me-2 fs-6"></i>
+                                <span>Sistemas</span>
+                            </button>
+                        </h2>
+                        <div id="menuSistemas" class="accordion-collapse collapse @(esSeguridad ? "show" : "")" data-bs-parent="#accordionSidebar">
+                            <div class="accordion-body p-0 ps-4">
+                                <a asp-page="/Seguridad/Usuarios" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/Seguridad/Usuarios" ? "active-link" : "")">
+                                    <i class="bi bi-people-fill me-2 text-info"></i> Usuarios & Roles
+                                </a>
+                                <a asp-page="/Seguridad/Permisos" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/Seguridad/Permisos" ? "active-link" : "")">
+                                    <i class="bi bi-key me-2"></i> Permisos
+                                </a>
+                                <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
+                                    <i class="bi bi-sliders me-2"></i> Configuración ERP
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </nav>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <div id="content">
+            <!-- NAVBAR SUPERIOR -->
+            <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom px-4 py-2 shadow-sm">
+                <div class="container-fluid p-0">
+                    <span class="navbar-text fw-semibold text-dark">
+                        <i class="bi bi-building me-1 text-primary"></i> Planta Principal - Perú
+                    </span>
+                    <div class="d-flex align-items-center ms-auto">
+                        <div class="dropdown">
+                            <button class="btn btn-light dropdown-toggle btn-sm fw-semibold border" type="button" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-person-circle text-primary me-1"></i> Usuario Administrador
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="userMenu">
+                                <li><a class="dropdown-item fs-7" href="#"><i class="bi bi-person me-2"></i> Mi Perfil</a></li>
+                                <li><a class="dropdown-item fs-7" href="#"><i class="bi bi-gear me-2"></i> Configuración</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item fs-7 text-danger" href="#"><i class="bi bi-box-arrow-right me-2"></i> Cerrar Sesión</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- RENDER BODY DE CADA RAZOR PAGE -->
+            <main class="container-fluid p-4">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    <!-- SCRIPTS CORE -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
