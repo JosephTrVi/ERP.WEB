@@ -1,6 +1,7 @@
+using ERP.WEB.Data;
+using ERP.WEB.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
-using ERP.WEB.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +30,8 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AllowAnonymousToPage("/Account/Login");
 });
 
+builder.Services.AddScoped<SunatTcService>();
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -36,6 +39,8 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Error");
     app.UseHsts();
 }
+
+
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();

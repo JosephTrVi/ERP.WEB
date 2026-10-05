@@ -1,11 +1,17 @@
 ﻿@{
-    // Obtener la ruta de la página actual para expandir el acordeón correspondiente
-    string pagePath = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
+    // Obtener la ruta de la página actual en minúsculas y sin barra final para comparaciones exactas
+    string pagePath = ViewContext.RouteData.Values["page"]?.ToString()?.ToLower().TrimEnd('/') ?? "";
 
-    bool esSolicitudes = pagePath.StartsWith("/Solicitudes");
-    bool esAlmacen = pagePath.StartsWith("/Almacen");
-    bool esLogistica = pagePath.StartsWith("/Compras");
-    bool esSeguridad = pagePath.StartsWith("/Seguridad") || pagePath.StartsWith("/Sistemas");
+    // Banderas para aperturar el menú desplegable activo según la sección actual
+    bool esSolicitudes = pagePath.StartsWith("/solicitudes");
+    bool esAlmacen = pagePath.StartsWith("/almacen");
+    bool esProduccion = pagePath.StartsWith("/produccion");
+    bool esLogistica = pagePath.StartsWith("/compras");
+    bool esVentas = pagePath.StartsWith("/ventas");
+    bool esRRHH = pagePath.StartsWith("/rrhh");
+    bool esContabilidad = pagePath.StartsWith("/contabilidad");
+    bool esFinanzas = pagePath.StartsWith("/finanzas");
+    bool esSistemas = pagePath.StartsWith("/seguridad") || pagePath.StartsWith("/sistemas");
 }
 
 <!DOCTYPE html>
@@ -59,9 +65,10 @@
         }
 
             .sidebar-menu .accordion-button:not(.collapsed) {
-                background-color: rgba(255, 255, 255, 0.08) !important;
+                background-color: rgba(255, 255, 255, 0.12) !important;
                 color: #ffffff !important;
                 box-shadow: none;
+                font-weight: 700 !important;
             }
 
             .sidebar-menu .accordion-button::after {
@@ -71,21 +78,30 @@
 
         .sidebar-menu .nav-link {
             font-size: 0.82rem;
-            padding: 0.35rem 0.75rem;
-            border-radius: 4px;
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
             transition: all 0.2s ease;
+            color: rgba(255, 255, 255, 0.65) !important;
         }
 
-            .sidebar-menu .nav-link:hover:not(.disabled) {
+            .sidebar-menu .nav-link:hover:not(.active-link):not(.disabled) {
                 color: #ffffff !important;
-                background-color: rgba(255, 255, 255, 0.1);
+                background-color: rgba(255, 255, 255, 0.1) !important;
             }
 
-            .sidebar-menu .nav-link.active-link {
-                color: #38bdf8 !important;
-                font-weight: 600;
-                background-color: rgba(56, 189, 248, 0.12);
+            /* REGLA FORZADA PARA LA OPCIÓN ACTIVA (AZUL CON TEXTO BLANCO) */
+            .sidebar-menu .nav-link.active-link,
+            .sidebar-menu a.nav-link.active-link {
+                background-color: #0d6efd !important;
+                color: #ffffff !important;
+                font-weight: 700 !important;
+                box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.25) !important;
             }
+
+                .sidebar-menu .nav-link.active-link i,
+                .sidebar-menu a.nav-link.active-link i {
+                    color: #ffffff !important;
+                }
 
             .sidebar-menu .nav-link.disabled {
                 opacity: 0.4;
@@ -130,11 +146,11 @@
                             </button>
                         </h2>
                         <div id="menuSolicitudes" class="accordion-collapse collapse @(esSolicitudes ? "show" : "")" data-bs-parent="#accordionSidebar">
-                            <div class="accordion-body p-0 ps-4">
-                                <a asp-page="/Solicitudes/Index" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/Solicitudes/Index" ? "active-link" : "")">
+                            <div class="accordion-body p-0 ps-3 my-1">
+                                <a asp-page="/Solicitudes/Index" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/solicitudes/index" || pagePath == "/solicitudes" ? "active-link" : "")">
                                     <i class="bi bi-file-earmark-spread me-2"></i> Mis Requerimientos
                                 </a>
-                                <a asp-page="/Solicitudes/Aprobaciones" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/Solicitudes/Aprobaciones" ? "active-link" : "")">
+                                <a asp-page="/Solicitudes/Aprobaciones" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/solicitudes/aprobaciones" ? "active-link" : "")">
                                     <i class="bi bi-check2-square text-warning me-2"></i> Aprobar Requerimientos
                                 </a>
                             </div>
@@ -150,14 +166,14 @@
                             </button>
                         </h2>
                         <div id="menuAlmacen" class="accordion-collapse collapse @(esAlmacen ? "show" : "")" data-bs-parent="#accordionSidebar">
-                            <div class="accordion-body p-0 ps-4">
-                                <a asp-page="/Almacen/Categorias" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/Almacen/Categorias" ? "active-link" : "")">
+                            <div class="accordion-body p-0 ps-3 my-1">
+                                <a asp-page="/Almacen/Categorias" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/almacen/categorias" ? "active-link" : "")">
                                     <i class="bi bi-folder-symlink me-2"></i> Categorías / SubCat.
                                 </a>
-                                <a asp-page="/Almacen/Articulos" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/Almacen/Articulos" ? "active-link" : "")">
+                                <a asp-page="/Almacen/Articulos" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/almacen/articulos" ? "active-link" : "")">
                                     <i class="bi bi-tags me-2"></i> Catálogo de Artículos
                                 </a>
-                                <a asp-page="/Almacen/BandejaRecepcion" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center">
+                                <a asp-page="/Almacen/BandejaRecepcion" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/almacen/bandejarecepcion" ? "active-link" : "")">
                                     <i class="bi bi-box-arrow-in-down me-2 text-success"></i> Recepción de Mercadería
                                 </a>
                                 <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
@@ -167,7 +183,30 @@
                         </div>
                     </div>
 
-                    <!-- 3. LOGÍSTICA Y COMPRAS -->
+                    <!-- 3. MÓDULO DE PRODUCCIÓN -->
+                    <div class="accordion-item bg-transparent border-0">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button @(esProduccion ? "" : "collapsed") bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuProduccion" aria-expanded="@(esProduccion ? "true" : "false")">
+                                <i class="bi bi-gear-wide-connected text-primary me-2 fs-6"></i>
+                                <span>Producción</span>
+                            </button>
+                        </h2>
+                        <div id="menuProduccion" class="accordion-collapse collapse @(esProduccion ? "show" : "")" data-bs-parent="#accordionSidebar">
+                            <div class="accordion-body p-0 ps-3 my-1">
+                                <a asp-page="/Produccion/Recetas/Index" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/produccion/recetas/index" || pagePath == "/produccion/recetas" ? "active-link" : "")">
+                                    <i class="bi bi-diagram-3 me-2"></i> Recetas y Fórmulas (BOM)
+                                </a>
+                                <a asp-page="/Produccion/Recetas/Crear" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/produccion/recetas/crear" ? "active-link" : "")">
+                                    <i class="bi bi-plus-circle me-2 text-success"></i> Nueva Receta
+                                </a>
+                                <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
+                                    <i class="bi bi-tools me-2"></i> Órdenes de Producción
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. LOGÍSTICA Y COMPRAS -->
                     <div class="accordion-item bg-transparent border-0">
                         <h2 class="accordion-header">
                             <button class="accordion-button @(esLogistica ? "" : "collapsed") bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuLogistica" aria-expanded="@(esLogistica ? "true" : "false")">
@@ -176,50 +215,56 @@
                             </button>
                         </h2>
                         <div id="menuLogistica" class="accordion-collapse collapse @(esLogistica ? "show" : "")" data-bs-parent="#accordionSidebar">
-                            <div class="accordion-body p-0 ps-4">
-                                <a asp-page="/Compras/BandejaRequerimientos" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/Compras/BandejaRequerimientos" ? "active-link" : "")">
+                            <div class="accordion-body p-0 ps-3 my-1">
+                                <a asp-page="/Compras/BandejaRequerimientos" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/compras/bandejarequerimientos" ? "active-link" : "")">
                                     <i class="bi bi-inbox me-2"></i> RQ Aprobados
                                 </a>
-                                <a asp-page="/Compras/OrdenesCompra" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center">
+                                <a asp-page="/Compras/OrdenesCompra" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/compras/ordenescompra" ? "active-link" : "")">
                                     <i class="bi bi-receipt me-2"></i> Órdenes de Compra
                                 </a>
-                                <a asp-page="/Compras/Proveedores" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center">
+                                <a asp-page="/Compras/Proveedores" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/compras/proveedores" ? "active-link" : "")">
                                     <i class="bi bi-truck me-2"></i> Proveedores
                                 </a>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 4. VENTAS Y COMERCIAL -->
+                    <!-- 5. MÓDULO DE VENTAS -->
                     <div class="accordion-item bg-transparent border-0">
                         <h2 class="accordion-header">
-                            <button class="accordion-button collapsed bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuVentas">
-                                <i class="bi bi-graph-up-arrow text-primary me-2 fs-6"></i>
-                                <span>Ventas</span>
+                            <button class="accordion-button @(esVentas ? "" : "collapsed") bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuVentas" aria-expanded="@(esVentas ? "true" : "false")">
+                                <i class="bi bi-graph-up-arrow text-warning me-2 fs-6"></i>
+                                <span>Módulo de Ventas</span>
                             </button>
                         </h2>
-                        <div id="menuVentas" class="accordion-collapse collapse" data-bs-parent="#accordionSidebar">
-                            <div class="accordion-body p-0 ps-4">
-                                <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
-                                    <i class="bi bi-person-lines-fill me-2"></i> Clientes
+                        <div id="menuVentas" class="accordion-collapse collapse @(esVentas ? "show" : "")" data-bs-parent="#accordionSidebar">
+                            <div class="accordion-body p-0 ps-3 my-1">
+                                <a asp-page="/Ventas/BandejaCotizaciones" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/ventas/bandejacotizaciones" ? "active-link" : "")">
+                                    <i class="bi bi-file-earmark-text me-2"></i> Mis Cotizaciones
                                 </a>
-                                <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
-                                    <i class="bi bi-file-earmark-spreadsheet me-2"></i> Cotizaciones / Pedidos
+                                <a asp-page="/Ventas/NuevaCotizacion" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/ventas/nuevacotizacion" ? "active-link" : "")">
+                                    <i class="bi bi-plus-circle me-2"></i> Registrar Cotización
+                                </a>
+                                <a asp-page="/Ventas/AprobacionCotizaciones" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/ventas/aprobacioncotizaciones" ? "active-link" : "")">
+                                    <i class="bi bi-shield-check me-2"></i> Aprobación de Gerencia
+                                </a>
+                                <a asp-page="/Ventas/ListasPrecios" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/ventas/listasprecios" ? "active-link" : "")">
+                                    <i class="bi bi-tags me-2"></i> Listas de Precios Mensuales
                                 </a>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 5. RECURSOS HUMANOS (RRHH) -->
+                    <!-- 6. RECURSOS HUMANOS (RRHH) -->
                     <div class="accordion-item bg-transparent border-0">
                         <h2 class="accordion-header">
-                            <button class="accordion-button collapsed bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuRRHH">
+                            <button class="accordion-button @(esRRHH ? "" : "collapsed") bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuRRHH" aria-expanded="@(esRRHH ? "true" : "false")">
                                 <i class="bi bi-people text-danger me-2 fs-6"></i>
                                 <span>Recursos Humanos</span>
                             </button>
                         </h2>
-                        <div id="menuRRHH" class="accordion-collapse collapse" data-bs-parent="#accordionSidebar">
-                            <div class="accordion-body p-0 ps-4">
+                        <div id="menuRRHH" class="accordion-collapse collapse @(esRRHH ? "show" : "")" data-bs-parent="#accordionSidebar">
+                            <div class="accordion-body p-0 ps-3 my-1">
                                 <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
                                     <i class="bi bi-person-badge me-2"></i> Personal / Empleados
                                 </a>
@@ -230,16 +275,19 @@
                         </div>
                     </div>
 
-                    <!-- 6. CONTABILIDAD -->
+                    <!-- 7. CONTABILIDAD -->
                     <div class="accordion-item bg-transparent border-0">
                         <h2 class="accordion-header">
-                            <button class="accordion-button collapsed bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuContabilidad">
+                            <button class="accordion-button @(esContabilidad ? "" : "collapsed") bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuContabilidad" aria-expanded="@(esContabilidad ? "true" : "false")">
                                 <i class="bi bi-calculator text-light me-2 fs-6"></i>
                                 <span>Contabilidad</span>
                             </button>
                         </h2>
-                        <div id="menuContabilidad" class="accordion-collapse collapse" data-bs-parent="#accordionSidebar">
-                            <div class="accordion-body p-0 ps-4">
+                        <div id="menuContabilidad" class="accordion-collapse collapse @(esContabilidad ? "show" : "")" data-bs-parent="#accordionSidebar">
+                            <div class="accordion-body p-0 ps-3 my-1">
+                                <a asp-page="/Maestros/TipoCambio" class="nav-link py-1 fs-7 d-flex align-items-center @(pagePath == "/maestros/tipocambio" ? "active-link" : "")">
+                                    <i class="bi bi-currency-dollar me-2 text-success"></i> Tipo de Cambio SUNAT
+                                </a>
                                 <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
                                     <i class="bi bi-book me-2"></i> Plan Contable
                                 </a>
@@ -250,16 +298,16 @@
                         </div>
                     </div>
 
-                    <!-- 7. FINANZAS -->
+                    <!-- 8. FINANZAS -->
                     <div class="accordion-item bg-transparent border-0">
                         <h2 class="accordion-header">
-                            <button class="accordion-button collapsed bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuFinanzas">
+                            <button class="accordion-button @(esFinanzas ? "" : "collapsed") bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuFinanzas" aria-expanded="@(esFinanzas ? "true" : "false")">
                                 <i class="bi bi-bank text-warning me-2 fs-6"></i>
                                 <span>Finanzas</span>
                             </button>
                         </h2>
-                        <div id="menuFinanzas" class="accordion-collapse collapse" data-bs-parent="#accordionSidebar">
-                            <div class="accordion-body p-0 ps-4">
+                        <div id="menuFinanzas" class="accordion-collapse collapse @(esFinanzas ? "show" : "")" data-bs-parent="#accordionSidebar">
+                            <div class="accordion-body p-0 ps-3 my-1">
                                 <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
                                     <i class="bi bi-credit-card me-2"></i> Cuentas por Cobrar/Pagar
                                 </a>
@@ -270,20 +318,20 @@
                         </div>
                     </div>
 
-                    <!-- 8. SISTEMAS & SEGURIDAD -->
+                    <!-- 9. SISTEMAS & SEGURIDAD -->
                     <div class="accordion-item bg-transparent border-0">
                         <h2 class="accordion-header">
-                            <button class="accordion-button @(esSeguridad ? "" : "collapsed") bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuSistemas" aria-expanded="@(esSeguridad ? "true" : "false")">
+                            <button class="accordion-button @(esSistemas ? "" : "collapsed") bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuSistemas" aria-expanded="@(esSistemas ? "true" : "false")">
                                 <i class="bi bi-shield-lock text-secondary me-2 fs-6"></i>
                                 <span>Sistemas</span>
                             </button>
                         </h2>
-                        <div id="menuSistemas" class="accordion-collapse collapse @(esSeguridad ? "show" : "")" data-bs-parent="#accordionSidebar">
-                            <div class="accordion-body p-0 ps-4">
-                                <a asp-page="/Seguridad/Usuarios" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/Seguridad/Usuarios" ? "active-link" : "")">
+                        <div id="menuSistemas" class="accordion-collapse collapse @(esSistemas ? "show" : "")" data-bs-parent="#accordionSidebar">
+                            <div class="accordion-body p-0 ps-3 my-1">
+                                <a asp-page="/Seguridad/Usuarios" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/seguridad/usuarios" ? "active-link" : "")">
                                     <i class="bi bi-people-fill me-2 text-info"></i> Usuarios & Roles
                                 </a>
-                                <a asp-page="/Seguridad/Permisos" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/Seguridad/Permisos" ? "active-link" : "")">
+                                <a asp-page="/Seguridad/Permisos" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/seguridad/permisos" ? "active-link" : "")">
                                     <i class="bi bi-key me-2"></i> Permisos
                                 </a>
                                 <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">

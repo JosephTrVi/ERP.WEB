@@ -44,6 +44,7 @@
                             <tr>
                                 <th>Código</th>
                                 <th>Nombre</th>
+                                <th class="text-center">Usos</th>
                                 <th class="text-center">Estado</th>
                                 <th class="text-end">Acciones</th>
                             </tr>
@@ -56,6 +57,16 @@
                                     <td><code>@cat.Codigo</code></td>
                                     <td>
                                         <span class="text-dark d-block fw-semibold">@cat.Nombre</span>
+                                    </td>
+                                    <td class="text-center">
+                                        @if (cat.EsReceta)
+                                        {
+                                            <span class="badge bg-primary me-1" title="Permite crear Recetas/BOM"><i class="bi bi-diagram-3 me-1"></i>Receta</span>
+                                        }
+                                        @if (cat.EsComponente)
+                                        {
+                                            <span class="badge bg-info text-dark" title="Permite usarse como Insumo"><i class="bi bi-cpu me-1"></i>Insumo</span>
+                                        }
                                     </td>
                                     <td class="text-center">
                                         @if (cat.Estado)
@@ -71,7 +82,7 @@
                                         <button class="btn btn-sm btn-outline-info me-1" onclick="seleccionarCategoria(@cat.CategoriaID, '@cat.Nombre')" title="Ver SubCategorías">
                                             <i class="bi bi-arrow-right-short fs-6"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-outline-primary" onclick="editarCategoria(@cat.CategoriaID, '@cat.Codigo', '@cat.Nombre', '@cat.Descripcion', @cat.Estado.ToString().ToLower())" data-bs-toggle="modal" data-bs-target="#modalCategoria">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="editarCategoria(@cat.CategoriaID, '@cat.Codigo', '@cat.Nombre', '@cat.Descripcion', @cat.Estado.ToString().ToLower(), @cat.EsReceta.ToString().ToLower(), @cat.EsComponente.ToString().ToLower())" data-bs-toggle="modal" data-bs-target="#modalCategoria">
                                             <i class="bi bi-pencil"></i>
                                         </button>
                                     </td>
@@ -110,13 +121,13 @@
                 }
                 else
                 {
-                    <!-- La tabla se renderiza vía JS o al cargar por GET -->
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0" id="tablaSubCategorias">
                             <thead class="table-light">
                                 <tr>
                                     <th>Código</th>
                                     <th>Nombre</th>
+                                    <th class="text-center">Usos</th>
                                     <th class="text-center">Estado</th>
                                     <th class="text-end">Acciones</th>
                                 </tr>
@@ -128,6 +139,16 @@
                                         <td><code>@subCat.Codigo</code></td>
                                         <td class="fw-semibold text-dark">@subCat.Nombre</td>
                                         <td class="text-center">
+                                            @if (subCat.EsReceta)
+                                            {
+                                                <span class="badge bg-primary me-1" title="Permite crear Recetas/BOM"><i class="bi bi-diagram-3 me-1"></i>Receta</span>
+                                            }
+                                            @if (subCat.EsComponente)
+                                            {
+                                                <span class="badge bg-info text-dark" title="Permite usarse como Insumo"><i class="bi bi-cpu me-1"></i>Insumo</span>
+                                            }
+                                        </td>
+                                        <td class="text-center">
                                             @if (subCat.Estado)
                                             {
                                                 <span class="badge bg-success">Activo</span>
@@ -138,7 +159,7 @@
                                             }
                                         </td>
                                         <td class="text-end">
-                                            <button class="btn btn-sm btn-outline-primary" onclick="editarSubCategoria(@subCat.SubCategoriaID, @subCat.CategoriaID, '@subCat.Codigo', '@subCat.Nombre', @subCat.Estado.ToString().ToLower())" data-bs-toggle="modal" data-bs-target="#modalSubCategoria">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="editarSubCategoria(@subCat.SubCategoriaID, @subCat.CategoriaID, '@subCat.Codigo', '@subCat.Nombre', @subCat.Estado.ToString().ToLower(), @subCat.EsReceta.ToString().ToLower(), @subCat.EsComponente.ToString().ToLower())" data-bs-toggle="modal" data-bs-target="#modalSubCategoria">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
                                         </td>
@@ -166,10 +187,10 @@
                     <input type="hidden" asp-for="InputCategoria.CategoriaID" id="txtCatID" value="0" />
 
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Código Prefijo (Autogenerado) <span class="text-danger">*</span></label>
+                        <label class="form-label fw-semibold">Código Prefijo <span class="text-danger">*</span></label>
                         <div class="input-group">
-                            <input type="text" class="form-control bg-light fw-bold text-primary" asp-for="InputCategoria.Codigo" id="txtCatCodigo" maxlength="10" readonly required />
-                            <span class="input-group-text bg-light"><i class="bi bi-lock-fill text-muted"></i></span>
+                            <input type="text" class="form-control bg-light fw-bold text-primary" asp-for="InputCategoria.Codigo" id="txtCatCodigo" maxlength="10" required />
+                            <span class="input-group-text bg-light"><i class="bi bi-tag-fill text-muted"></i></span>
                         </div>
                     </div>
                     <div class="mb-3">
@@ -180,8 +201,22 @@
                         <label class="form-label fw-semibold">Descripción</label>
                         <textarea class="form-control" asp-for="InputCategoria.Descripcion" id="txtCatDesc" rows="2"></textarea>
                     </div>
+
+                    <!-- USOS EN PRODUCCIÓN -->
+                    <div class="p-2 border rounded bg-light mb-3">
+                        <label class="form-label fw-semibold small d-block mb-2 text-primary"><i class="bi bi-gear-wide-connected me-1"></i>Configuración de Producción:</label>
+                        <div class="form-check form-switch mb-1">
+                            <input class="form-check-input" type="checkbox" asp-for="InputCategoria.EsReceta" id="chkCatEsReceta" />
+                            <label class="form-check-label small fw-semibold" for="chkCatEsReceta">¿Permite crear Receta / Fórmula (Producto Terminado)?</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" asp-for="InputCategoria.EsComponente" id="chkCatEsComponente" />
+                            <label class="form-check-label small fw-semibold" for="chkCatEsComponente">¿Permite usarse como Insumo / Componente?</label>
+                        </div>
+                    </div>
+
                     <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" asp-for="InputCategoria.Estado" id="chkCatEstado" checked>
+                        <input class="form-check-input" type="checkbox" asp-for="InputCategoria.Estado" id="chkCatEstado" />
                         <label class="form-check-label fw-semibold" for="chkCatEstado">Categoría Activa</label>
                     </div>
                 </div>
@@ -208,18 +243,32 @@
                     <input type="hidden" asp-for="InputSubCategoria.CategoriaID" id="txtSubCatCategoriaID" />
 
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Código Prefijo (Autogenerado) <span class="text-danger">*</span></label>
+                        <label class="form-label fw-semibold">Código Prefijo <span class="text-danger">*</span></label>
                         <div class="input-group">
-                            <input type="text" class="form-control bg-light fw-bold text-success" asp-for="InputSubCategoria.Codigo" id="txtSubCatCodigo" maxlength="10" readonly required />
-                            <span class="input-group-text bg-light"><i class="bi bi-lock-fill text-muted"></i></span>
+                            <input type="text" class="form-control bg-light fw-bold text-success" asp-for="InputSubCategoria.Codigo" id="txtSubCatCodigo" maxlength="10" required />
+                            <span class="input-group-text bg-light"><i class="bi bi-tag-fill text-muted"></i></span>
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Nombre de la SubCategoría <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" asp-for="InputSubCategoria.Nombre" id="txtSubCatNombre" required />
                     </div>
+
+                    <!-- USOS EN PRODUCCIÓN -->
+                    <div class="p-2 border rounded bg-light mb-3">
+                        <label class="form-label fw-semibold small d-block mb-2 text-primary"><i class="bi bi-gear-wide-connected me-1"></i>Configuración de Producción:</label>
+                        <div class="form-check form-switch mb-1">
+                            <input class="form-check-input" type="checkbox" asp-for="InputSubCategoria.EsReceta" id="chkSubCatEsReceta" />
+                            <label class="form-check-label small fw-semibold" for="chkSubCatEsReceta">¿Permite crear Receta / Fórmula (Producto Terminado)?</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" asp-for="InputSubCategoria.EsComponente" id="chkSubCatEsComponente" />
+                            <label class="form-check-label small fw-semibold" for="chkSubCatEsComponente">¿Permite usarse como Insumo / Componente?</label>
+                        </div>
+                    </div>
+
                     <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" asp-for="InputSubCategoria.Estado" id="chkSubCatEstado" checked>
+                        <input class="form-check-input" type="checkbox" asp-for="InputSubCategoria.Estado" id="chkSubCatEstado" />
                         <label class="form-check-label fw-semibold" for="chkSubCatEstado">SubCategoría Activa</label>
                     </div>
                 </div>
@@ -236,18 +285,18 @@
     <script>
         let categoriaActivaID = @(Model.CategoriaSeleccionadaID.HasValue? Model.CategoriaSeleccionadaID.Value : 0);
 
-        // SELECCIÓN ASÍNCRONA DE CATEGORÍA (Sin recargar la barra lateral ni la página)
+        // SELECCIÓN ASÍNCRONA DE CATEGORÍA (Sin recargar la página)
         async function seleccionarCategoria(categoriaId, nombreCategoria) {
             categoriaActivaID = categoriaId;
 
-            // 1. Resaltar la fila seleccionada en el panel izquierdo
+            // 1. Resaltar la fila seleccionada
             document.querySelectorAll('.fila-categoria').forEach(tr => {
                 tr.classList.remove('table-primary', 'fw-bold');
             });
             const trActivo = document.getElementById(`trCat_${categoriaId}`);
             if (trActivo) trActivo.classList.add('table-primary', 'fw-bold');
 
-            // 2. Actualizar encabezado y mostrar botón "Nueva SubCategoría"
+            // 2. Actualizar encabezado
             document.getElementById('lblCategoriaSeleccionada').innerText = `(${nombreCategoria})`;
             document.getElementById('contenedorBtnNuevaSubCat').style.display = 'block';
 
@@ -282,6 +331,7 @@
                             <tr>
                                 <th>Código</th>
                                 <th>Nombre</th>
+                                <th class="text-center">Usos</th>
                                 <th class="text-center">Estado</th>
                                 <th class="text-end">Acciones</th>
                             </tr>
@@ -293,13 +343,22 @@
                     ? '<span class="badge bg-success">Activo</span>'
                     : '<span class="badge bg-secondary">Inactivo</span>';
 
+                const badgeEsReceta = subCat.esReceta
+                    ? '<span class="badge bg-primary me-1" title="Permite crear Recetas/BOM"><i class="bi bi-diagram-3 me-1"></i>Receta</span>'
+                    : '';
+
+                const badgeEsComponente = subCat.esComponente
+                    ? '<span class="badge bg-info text-dark" title="Permite usarse como Insumo"><i class="bi bi-cpu me-1"></i>Insumo</span>'
+                    : '';
+
                 html += `
                     <tr>
                         <td><code>${subCat.codigo ?? ''}</code></td>
                         <td class="fw-semibold text-dark">${subCat.nombre}</td>
+                        <td class="text-center">${badgeEsReceta}${badgeEsComponente}</td>
                         <td class="text-center">${badgeEstado}</td>
                         <td class="text-end">
-                            <button class="btn btn-sm btn-outline-primary" onclick="editarSubCategoria(${subCat.subCategoriaID}, ${categoriaId}, '${subCat.codigo ?? ''}', '${subCat.nombre}', ${subCat.estado})" data-bs-toggle="modal" data-bs-target="#modalSubCategoria">
+                            <button class="btn btn-sm btn-outline-primary" onclick="editarSubCategoria(${subCat.subCategoriaID}, ${categoriaId}, '${subCat.codigo ?? ''}', '${subCat.nombre}', ${subCat.estado}, ${subCat.esReceta ?? true}, ${subCat.esComponente ?? true})" data-bs-toggle="modal" data-bs-target="#modalSubCategoria">
                                 <i class="bi bi-pencil"></i>
                             </button>
                         </td>
@@ -315,6 +374,8 @@
             document.getElementById('txtCatID').value = "0";
             document.getElementById('txtCatNombre').value = "";
             document.getElementById('txtCatDesc').value = "";
+            document.getElementById('chkCatEsReceta').checked = true;
+            document.getElementById('chkCatEsComponente').checked = true;
             document.getElementById('chkCatEstado').checked = true;
 
             try {
@@ -328,13 +389,15 @@
             }
         }
 
-        function editarCategoria(id, codigo, nombre, desc, estado) {
+                function editarCategoria(id, codigo, nombre, desc, estado, esReceta, esComponente) {
             document.getElementById('modalCatTitle').innerText = "Editar Categoría";
             document.getElementById('txtCatID').value = id;
             document.getElementById('txtCatCodigo').value = codigo;
             document.getElementById('txtCatNombre').value = nombre;
-            document.getElementById('txtCatDesc').value = desc;
-            document.getElementById('chkCatEstado').checked = estado;
+            document.getElementById('txtCatDesc').value = desc ?? "";
+            document.getElementById('chkCatEsReceta').checked = esReceta === true || esReceta === "true";
+            document.getElementById('chkCatEsComponente').checked = esComponente === true || esComponente === "true";
+            document.getElementById('chkCatEstado').checked = estado === true || estado === "true";
         }
 
         async function limpiarModalSubCategoria() {
@@ -342,6 +405,8 @@
             document.getElementById('txtSubCatID').value = "0";
             document.getElementById('txtSubCatCategoriaID').value = categoriaActivaID;
             document.getElementById('txtSubCatNombre').value = "";
+            document.getElementById('chkSubCatEsReceta').checked = true;
+            document.getElementById('chkSubCatEsComponente').checked = true;
             document.getElementById('chkSubCatEstado').checked = true;
 
             try {
@@ -355,13 +420,15 @@
             }
         }
 
-        function editarSubCategoria(id, categoriaId, codigo, nombre, estado) {
+                function editarSubCategoria(id, categoriaId, codigo, nombre, estado, esReceta, esComponente) {
             document.getElementById('modalSubCatTitle').innerText = "Editar SubCategoría";
             document.getElementById('txtSubCatID').value = id;
             document.getElementById('txtSubCatCategoriaID').value = categoriaId;
             document.getElementById('txtSubCatCodigo').value = codigo;
             document.getElementById('txtSubCatNombre').value = nombre;
-            document.getElementById('chkSubCatEstado').checked = estado;
+            document.getElementById('chkSubCatEsReceta').checked = esReceta === true || esReceta === "true";
+            document.getElementById('chkSubCatEsComponente').checked = esComponente === true || esComponente === "true";
+            document.getElementById('chkSubCatEstado').checked = estado === true || estado === "true";
         }
     </script>
 }

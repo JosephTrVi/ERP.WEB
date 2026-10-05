@@ -11,15 +11,23 @@ namespace ERP.WEB.Models.Inventario
 
         public int CategoriaID { get; set; }
 
+        [Required]
         [StringLength(10)]
-        public string? Codigo { get; set; }
+        public string Codigo { get; set; } = string.Empty;
 
+        [StringLength(10)]
+        public string? CodigoPrefijo { get; set; }
+
+        [Required]
         [StringLength(100)]
-        public string? Nombre { get; set; } // <--- Cambiado a anulable (string?)
+        public string Nombre { get; set; } = string.Empty;
 
         public bool Estado { get; set; } = true;
 
         [ForeignKey("CategoriaID")]
         public virtual Categoria? Categoria { get; set; }
+
+        public bool EsReceta { get; set; } = true;
+        public bool EsComponente { get; set; } = true;
     }
 }

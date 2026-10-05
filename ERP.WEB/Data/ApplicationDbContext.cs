@@ -1,8 +1,10 @@
 ﻿using ERP.WEB.Models.Inventario;
 using ERP.WEB.Models.Logistica;
+using ERP.WEB.Models.Maestros;
 using ERP.WEB.Models.Personal;
+using ERP.WEB.Models.Produccion;
 using ERP.WEB.Models.Seguridad;
-using ERP.WEB.Models.Inventario;
+using ERP.WEB.Models.Ventas;
 using Microsoft.EntityFrameworkCore;
 
 namespace ERP.WEB.Data
@@ -35,6 +37,20 @@ namespace ERP.WEB.Data
         public DbSet<Almacen> Almacenes { get; set; } = null!;
         public DbSet<IngresosAlmacenCabecera> IngresosAlmacenCabecera { get; set; } = null!;
         public DbSet<IngresosAlmacenDetalle> IngresosAlmacenDetalle { get; set; } = null!;
+
+        // Ventas
+        public DbSet<ListasPreciosCabecera> ListasPreciosCabecera { get; set; } = null!;
+        public DbSet<ListasPreciosDetalle> ListasPreciosDetalle { get; set; } = null!;
+        public DbSet<CotizacionesCabecera> CotizacionesCabecera { get; set; } = null!;
+        public DbSet<CotizacionesDetalle> CotizacionesDetalle { get; set; } = null!;
+        public DbSet<TipoCambio> TipoCambio { get; set; } = null!;
+        public DbSet<Cliente> Clientes { get; set; } = null!;
+
+        // Produccion
+       
+        public DbSet<Receta> Recetas { get; set; }
+        public DbSet<RecetaDetalle> RecetaDetalles { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -194,6 +210,61 @@ namespace ERP.WEB.Data
                       .WithMany(c => c.Detalles)
                       .HasForeignKey(d => d.IngresoID)
                       .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Ventas
+            modelBuilder.Entity<ListasPreciosCabecera>(entity => {
+                entity.ToTable("ListasPreciosCabecera", "Ventas");
+                entity.HasKey(e => e.ListaPrecioID);
+            });
+
+            modelBuilder.Entity<ListasPreciosDetalle>(entity => {
+                entity.ToTable("ListasPreciosDetalle", "Ventas");
+                entity.HasKey(e => e.ListaPrecioDetalleID);
+            });
+
+            modelBuilder.Entity<CotizacionesCabecera>(entity => {
+                entity.ToTable("CotizacionesCabecera", "Ventas");
+                entity.HasKey(e => e.CotizacionID);
+            });
+
+            modelBuilder.Entity<CotizacionesDetalle>(entity => {
+                entity.ToTable("CotizacionesDetalle", "Ventas");
+                entity.HasKey(e => e.CotizacionDetalleID);
+            });
+
+            modelBuilder.Entity<Cliente>(entity =>
+            {
+                entity.ToTable("Clientes", "Ventas");
+                entity.HasKey(e => e.ClienteID);
+            });
+
+            //Produccion
+            // Mapeo explícito de tablas y esquemas (opcional si ya usaste [Table] en las entidades)
+            modelBuilder.Entity<Receta>()
+                .ToTable("Recetas", schema: "Produccion");
+
+            modelBuilder.Entity<RecetaDetalle>()
+                .ToTable("RecetaDetalles", schema: "Produccion");
+
+            // Configuración de precisión decimal para la cantidad requerida
+            modelBuilder.Entity<RecetaDetalle>()
+                .Property(r => r.CantidadRequerida)
+                .HasPrecision(18, 4);
+
+
+            // Mapeo explicito para Categorias
+            modelBuilder.Entity<Categoria>(entity =>
+            {
+                entity.Property(c => c.EsReceta).HasDefaultValue(true);
+                entity.Property(c => c.EsComponente).HasDefaultValue(true);
+            });
+
+            // Mapeo explicito para SubCategorias
+            modelBuilder.Entity<SubCategoria>(entity =>
+            {
+                entity.Property(s => s.EsReceta).HasDefaultValue(true);
+                entity.Property(s => s.EsComponente).HasDefaultValue(true);
             });
         }
     }

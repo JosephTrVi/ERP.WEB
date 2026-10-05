@@ -24,10 +24,10 @@ namespace ERP.WEB.Pages.Almacen
         public int? CategoriaSeleccionadaID { get; set; }
 
         [BindProperty]
-        public Categoria? InputCategoria { get; set; }
+        public Categoria InputCategoria { get; set; } = new();
 
         [BindProperty]
-        public SubCategoria? InputSubCategoria { get; set; }
+        public SubCategoria InputSubCategoria { get; set; } = new();
 
         [TempData]
         public string? MensajeExito { get; set; }
@@ -70,6 +70,11 @@ namespace ERP.WEB.Pages.Almacen
 
         public async Task<JsonResult> OnGetSiguienteCodigoSubCategoriaAsync(int categoriaId)
         {
+            var categoriaPadre = await _context.Categorias.FindAsync(categoriaId);
+            string prefijoCat = categoriaPadre != null && !string.IsNullOrEmpty(categoriaPadre.Codigo)
+                ? categoriaPadre.Codigo.PadLeft(2, '0')
+                : categoriaId.ToString("D2");
+
             var ultimaSubCat = await _context.SubCategorias
                 .Where(s => s.CategoriaID == categoriaId)
                 .OrderByDescending(s => s.SubCategoriaID)
@@ -79,33 +84,37 @@ namespace ERP.WEB.Pages.Almacen
 
             if (ultimaSubCat != null && !string.IsNullOrEmpty(ultimaSubCat.Codigo))
             {
-                if (int.TryParse(ultimaSubCat.Codigo, out int ultimoNum))
+                string sufijo = ultimaSubCat.Codigo.Length >= 2
+                    ? ultimaSubCat.Codigo.Substring(ultimaSubCat.Codigo.Length - 2)
+                    : ultimaSubCat.Codigo;
+
+                if (int.TryParse(sufijo, out int ultimoNum))
                 {
                     correlativo = ultimoNum + 1;
                 }
             }
 
-            string siguienteCodigo = correlativo.ToString("D2");
+            string siguienteCodigo = $"{prefijoCat}{correlativo.ToString("D2")}";
             return new JsonResult(new { codigo = siguienteCodigo });
         }
 
+        // =========================================================
+        // HANDLER: GUARDAR CATEGORÍA
+        // =========================================================
         public async Task<IActionResult> OnPostGuardarCategoriaAsync()
         {
-            // Eliminar todas las entradas de InputSubCategoria del ModelState
-            var subCatKeys = ModelState.Keys.Where(k => k.StartsWith("InputSubCategoria")).ToList();
-            foreach (var key in subCatKeys)
-            {
-                ModelState.Remove(key);
-            }
+            // Limpiar ModelState por completo para evitar que la validación de SubCategoría interfiera
+            ModelState.Clear();
 
-            if (InputCategoria == null || string.IsNullOrWhiteSpace(InputCategoria.Nombre))
+            if (InputCategoria == null || string.IsNullOrWhiteSpace(InputCategoria.Codigo) || string.IsNullOrWhiteSpace(InputCategoria.Nombre))
             {
-                MensajeError = "El nombre de la categoría es obligatorio.";
+                MensajeError = "El Código y Nombre de la categoría son obligatorios.";
                 await OnGetAsync();
                 return Page();
             }
 
-            if (!ModelState.IsValid)
+            // Validar manualmente la entidad de Categoría
+            if (!TryValidateModel(InputCategoria, nameof(InputCategoria)))
             {
                 var errores = string.Join(" | ", ModelState.Values
                     .SelectMany(v => v.Errors)
@@ -130,6 +139,8 @@ namespace ERP.WEB.Pages.Almacen
                     catBD.Nombre = InputCategoria.Nombre;
                     catBD.Descripcion = InputCategoria.Descripcion;
                     catBD.Estado = InputCategoria.Estado;
+                    catBD.EsReceta = InputCategoria.EsReceta;
+                    catBD.EsComponente = InputCategoria.EsComponente;
 
                     _context.Categorias.Update(catBD);
                     MensajeExito = "Categoría actualizada correctamente.";
@@ -140,23 +151,23 @@ namespace ERP.WEB.Pages.Almacen
             return RedirectToPage(new { CategoriaSeleccionadaID = InputCategoria.CategoriaID > 0 ? InputCategoria.CategoriaID : (int?)null });
         }
 
+        // =========================================================
+        // HANDLER: GUARDAR SUBCATEGORÍA
+        // =========================================================
         public async Task<IActionResult> OnPostGuardarSubCategoriaAsync()
         {
-            // Eliminar todas las entradas de InputCategoria y referencias de navegación del ModelState
-            var catKeys = ModelState.Keys.Where(k => k.StartsWith("InputCategoria") || k.StartsWith("InputSubCategoria.Categoria")).ToList();
-            foreach (var key in catKeys)
-            {
-                ModelState.Remove(key);
-            }
+            // Limpiar ModelState por completo para evitar que la validación de Categoría interfiera
+            ModelState.Clear();
 
-            if (InputSubCategoria == null || string.IsNullOrWhiteSpace(InputSubCategoria.Nombre))
+            if (InputSubCategoria == null || string.IsNullOrWhiteSpace(InputSubCategoria.Codigo) || string.IsNullOrWhiteSpace(InputSubCategoria.Nombre))
             {
-                MensajeError = "El nombre de la subcategoría es obligatorio.";
+                MensajeError = "El Código y Nombre de la subcategoría son obligatorios.";
                 await OnGetAsync();
                 return Page();
             }
 
-            if (!ModelState.IsValid)
+            // Validar manualmente solo la entidad de SubCategoría
+            if (!TryValidateModel(InputSubCategoria, nameof(InputSubCategoria)))
             {
                 var errores = string.Join(" | ", ModelState.Values
                     .SelectMany(v => v.Errors)
@@ -183,6 +194,8 @@ namespace ERP.WEB.Pages.Almacen
                         subCatBD.Codigo = InputSubCategoria.Codigo;
                         subCatBD.Nombre = InputSubCategoria.Nombre;
                         subCatBD.Estado = InputSubCategoria.Estado;
+                        subCatBD.EsReceta = InputSubCategoria.EsReceta;
+                        subCatBD.EsComponente = InputSubCategoria.EsComponente;
 
                         _context.SubCategorias.Update(subCatBD);
                         await _context.SaveChangesAsync();
@@ -200,7 +213,6 @@ namespace ERP.WEB.Pages.Almacen
             }
         }
 
-        // HANDLER AJAX: Obtener subcategorías para el panel derecho sin recargar la página
         public async Task<JsonResult> OnGetObtenerSubCategoriasAsync(int categoriaId)
         {
             var subcategorias = await _context.SubCategorias
@@ -210,12 +222,19 @@ namespace ERP.WEB.Pages.Almacen
                     categoriaID = s.CategoriaID,
                     codigo = s.Codigo,
                     nombre = s.Nombre,
-                    estado = s.Estado
+                    estado = s.Estado,
+                    esReceta = s.EsReceta,
+                    esComponente = s.EsComponente
                 })
                 .AsNoTracking()
                 .ToListAsync();
 
             return new JsonResult(subcategorias);
+        }
+
+        public async Task<JsonResult> OnGetSubCategoriasPorCategoriaAsync(int categoriaId)
+        {
+            return await OnGetObtenerSubCategoriasAsync(categoriaId);
         }
     }
 }

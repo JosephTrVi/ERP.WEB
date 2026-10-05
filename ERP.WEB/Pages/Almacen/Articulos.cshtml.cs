@@ -97,7 +97,8 @@ namespace ERP.WEB.Pages.Almacen
                     query = query.Where(p => p.SKU.ToLower().Contains(termino) || p.Nombre.ToLower().Contains(termino));
                 }
 
-                ListaProductos = await query.ToListAsync();
+                // Ordenar por ProductoID para evitar errores por columnas no existentes
+                ListaProductos = await query.OrderByDescending(p => p.ProductoID).ToListAsync();
             }
         }
 
@@ -159,6 +160,7 @@ namespace ERP.WEB.Pages.Almacen
 
             if (InputProducto.ProductoID == 0)
             {
+                InputProducto.FechaRegistro = DateTime.Now;
                 _context.Productos.Add(InputProducto);
                 MensajeExito = "Artículo registrado correctamente.";
             }

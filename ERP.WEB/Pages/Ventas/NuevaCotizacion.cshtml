@@ -1,0 +1,508 @@
+﻿@page
+@model ERP.WEB.Pages.Ventas.NuevaCotizacionModel
+@{
+    ViewData["Title"] = "Nueva Cotización de Venta";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold text-dark mb-0"><i class="bi bi-file-earmark-plus me-2 text-primary"></i>Registrar Cotización</h4>
+        <small class="text-muted">Creación de propuesta comercial para aprobación de Gerencia de Ventas</small>
+    </div>
+    <a asp-page="/Ventas/BandejaCotizaciones" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i> Regresar a Bandeja
+    </a>
+</div>
+
+<form method="post" asp-page-handler="GuardarCotizacion" id="formCotiz">
+    <input type="hidden" asp-for="InputCotiz.ClienteID" id="txtClienteID" />
+    <input type="hidden" asp-for="ItemsJson" id="txtItemsJson" />
+
+    <!-- DATOS CLIENTE -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-dark text-white py-2">
+            <h6 class="mb-0 fw-bold"><i class="bi bi-person-lines-fill me-2"></i>Datos del Cliente y Venta</h6>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label fw-semibold">Código</label>
+                    <input type="text" class="form-control bg-light fw-bold text-primary" asp-for="InputCotiz.Codigo" readonly />
+                </div>
+
+                <!-- BUSCADOR DINÁMICO DE CLIENTES -->
+                <div class="col-md-4 position-relative">
+                    <label class="form-label fw-semibold">Cliente / Razón Social <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="bi bi-search text-primary"></i></span>
+                        <input type="text" class="form-control fw-bold" asp-for="InputCotiz.ClienteNombre" id="txtClienteNombre" placeholder="Buscar RUC, DNI o Nombre..." autocomplete="off" oninput="buscarCliente()" required />
+                        <button type="button" class="btn btn-outline-secondary d-none" id="btnLimpiarCliente" onclick="limpiarCliente()">
+                            <i class="bi bi-x-circle"></i>
+                        </button>
+                    </div>
+                    <!-- Lista de resultados flotante -->
+                    <div id="listResCliente" class="list-group position-absolute w-100 shadow-lg d-none" style="z-index: 1050; max-height: 220px; overflow-y: auto;"></div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Dirección de Entrega <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" asp-for="InputCotiz.ClienteDireccion" id="txtClienteDireccion" required />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">Fecha Entrega Aprox. <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" asp-for="InputCotiz.FechaEntregaAprox" required />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">Forma de Pago</label>
+                    <select class="form-select" asp-for="InputCotiz.FormaPago">
+                        <option value="Contado">Contado</option>
+                        <option value="Crédito 15 días">Crédito 15 días</option>
+                        <option value="Crédito 30 días" selected>Crédito 30 días</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">Moneda <span class="text-danger">*</span></label>
+                    <select class="form-select fw-bold" asp-for="InputCotiz.Moneda" id="ddlMoneda" onchange="recalcularTotales()">
+                        <option value="PEN">S/ - Soles</option>
+                        <option value="USD">$ - Dólares</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">Tipo de Cambio (TC)</label>
+                    <input type="number" step="0.0001" class="form-control fw-bold" asp-for="InputCotiz.TipoCambio" id="txtTC" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABLA DE DETALLES DE PRODUCTOS -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+            <h6 class="fw-bold text-dark mb-0"><i class="bi bi-box-seam me-2 text-primary"></i>Ítems a Cotizar</h6>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-primary fw-semibold" onclick="abrirBuscadorArticulosPT()">
+                    <i class="bi bi-search me-1"></i> Buscar Artículos en Catálogo
+                </button>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Artículo / Servicio</th>
+                            <th style="width: 100px;">U.M.</th>
+                            <th style="width: 120px;" class="text-end">Cantidad</th>
+                            <th style="width: 160px;" class="text-end">Precio Unit. Sin IGV</th>
+                            <th style="width: 160px;" class="text-end">SubTotal</th>
+                            <th style="width: 60px;" class="text-center"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbodyCotiz"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-light p-3">
+            <div class="row justify-content-end">
+                <div class="col-md-5">
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr>
+                            <td class="fw-semibold text-end">SubTotal (Sin IGV):</td>
+                            <td class="text-end fw-bold"><span class="simbolo-moneda">S/</span> <span id="lblSubTotal">0.00</span></td>
+                        </tr>
+                        <tr>
+                            <td class="fw-semibold text-end">IGV (18%):</td>
+                            <td class="text-end fw-bold text-muted"><span class="simbolo-moneda">S/</span> <span id="lblIGV">0.00</span></td>
+                        </tr>
+                        <tr class="border-top">
+                            <td class="fs-6 fw-bold text-end text-dark">Total Cotización:</td>
+                            <td class="fs-6 text-end fw-bold text-success"><span class="simbolo-moneda">S/</span> <span id="lblTotal">0.00</span></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2">
+        <a asp-page="/Ventas/BandejaCotizaciones" class="btn btn-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-success fw-semibold px-4"><i class="bi bi-send me-1"></i> Registrar y Enviar a Gerencia</button>
+    </div>
+</form>
+
+<!-- MODAL 1: BUSCAR ARTÍCULOS EN CATÁLOGO (PRODUCTOS TERMINADOS) -->
+<div class="modal fade" id="modalBuscadorArticulosPT" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white py-2">
+                <h5 class="modal-title fw-bold"><i class="bi bi-search me-2"></i>Buscar Artículos en Catálogo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3">
+                <!-- BARRA DE FILTROS -->
+                <div class="row g-2 align-items-end mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-muted mb-1">Categoría</label>
+                        <select class="form-select form-select-sm bg-light" disabled>
+                            <option selected>Productos Terminados</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-muted mb-1">SubCategoría</label>
+                        <select class="form-select form-select-sm" id="ddlFiltroSubCatPT" asp-items="Model.SelectSubCategoriasPT">
+                            <option value="0">-- Todas las SubCategorías --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold text-muted mb-1">Código / Descripción</label>
+                        <input type="text" class="form-control form-control-sm" id="txtFiltroQueryPT" placeholder="Buscar por SKU o Nombre..." />
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-primary btn-sm fw-semibold w-100" onclick="buscarProductosTerminados()">
+                            <i class="bi bi-funnel me-1"></i> Filtrar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- TABLA DE RESULTADOS -->
+                <div class="table-responsive border rounded mb-3" style="min-height: 180px; max-height: 280px;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>SKU</th>
+                                <th>Artículo / Servicio</th>
+                                <th>Categoría / SubCat</th>
+                                <th>U.M.</th>
+                                <th class="text-end">Stock Actual</th>
+                                <th class="text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyResultadosPT">
+                            <tr><td colspan="6" class="text-center py-4 text-muted">Seleccione un filtro o ingrese un código y haga clic en <strong>Filtrar</strong>.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ALERTA CREAR ON-THE-FLY -->
+                <div class="alert alert-warning d-flex justify-content-between align-items-center mb-0 py-2 px-3 border-warning">
+                    <div class="small fw-semibold text-dark">
+                        <i class="bi bi-question-circle-fill text-warning me-2 fs-6"></i>
+                        ¿No encuentra el artículo o servicio que necesita cotizar?
+                    </div>
+                    <button type="button" class="btn btn-outline-dark btn-sm fw-semibold bg-white" onclick="abrirSubModalCrearOnTheFly()">
+                        <i class="bi bi-plus-circle me-1"></i> Crear Nuevo Artículo
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 2: CREAR ARTÍCULO ON-THE-FLY (PRODUCTO TERMINADO) -->
+<div class="modal fade" id="modalCrearOnTheFlyPT" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white py-2">
+                <h6 class="modal-title fw-bold"><i class="bi bi-box-seam me-2"></i>Crear Artículo On-the-Fly (Producto Terminado)</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold small">Categoría <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm bg-light fw-bold" value="Productos Terminados" readonly />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold small">SubCategoría <span class="text-danger">*</span></label>
+                        <select class="form-select form-select-sm" id="ddlSubCatOnTheFly" asp-items="Model.SelectSubCategoriasPT" onchange="autogenerarSkuOnTheFly()" required>
+                            <option value="">-- Seleccionar --</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold small">SKU Autogenerado</label>
+                        <input type="text" class="form-control form-control-sm bg-light fw-bold text-primary" id="txtSkuOnTheFly" readonly placeholder="PT-XXX-0001" />
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label fw-semibold small">Nombre del Artículo <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-sm" id="txtNombreOnTheFly" required placeholder="Ej: Gabinete Metálico 42U" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold small">Unidad Medida</label>
+                        <select class="form-select form-select-sm" id="ddlUmOnTheFly">
+                            <option value="UND" selected>Unidades (UND)</option>
+                            <option value="JGS">Juegos (JGS)</option>
+                            <option value="MTR">Metros (MTR)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <div class="form-check form-switch mb-1">
+                            <input class="form-check-input" type="checkbox" id="chkControlaStockOnTheFly" checked>
+                            <label class="form-check-label fw-semibold small" for="chkControlaStockOnTheFly">Controla Inventario / Stock</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer py-2 bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success btn-sm fw-semibold" onclick="guardarArticuloOnTheFly()">
+                    <i class="bi bi-check-circle me-1"></i> Guardar y Añadir a Cotización
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let timerCliente;
+
+        // LÓGICA BÚSQUEDA DE CLIENTE
+        function buscarCliente() {
+            clearTimeout(timerCliente);
+            const q = document.getElementById('txtClienteNombre').value.trim();
+            const listRes = document.getElementById('listResCliente');
+
+            if (q.length < 2) {
+                listRes.classList.add('d-none');
+                return;
+            }
+
+            timerCliente = setTimeout(async () => {
+                try {
+                    const resp = await fetch(`?handler=BuscarClientes&q=${encodeURIComponent(q)}`);
+                    if (!resp.ok) return;
+
+                    const data = await resp.json();
+                    listRes.innerHTML = '';
+
+                    if (data.length === 0) {
+                        listRes.innerHTML = '<div class="list-group-item text-muted small">No se encontraron clientes coincidente.</div>';
+                    } else {
+                        data.forEach(cli => {
+                            const a = document.createElement('a');
+                            a.href = '#';
+                            a.className = 'list-group-item list-group-item-action small fw-semibold';
+                            a.innerText = cli.displayText || `[${cli.documento}] ${cli.nombre}`;
+                            a.onclick = (e) => {
+                                e.preventDefault();
+                                seleccionarCliente(cli);
+                            };
+                            listRes.appendChild(a);
+                        });
+                    }
+                    listRes.classList.remove('d-none');
+                } catch (err) {
+                    console.error("Error de red al buscar cliente:", err);
+                }
+            }, 300);
+        }
+
+        function seleccionarCliente(cli) {
+            document.getElementById('txtClienteID').value = cli.id;
+            document.getElementById('txtClienteNombre').value = cli.nombre;
+            if (cli.direccion) {
+                document.getElementById('txtClienteDireccion').value = cli.direccion;
+            }
+
+            document.getElementById('btnLimpiarCliente').classList.remove('d-none');
+            document.getElementById('listResCliente').classList.add('d-none');
+        }
+
+        function limpiarCliente() {
+            document.getElementById('txtClienteID').value = '0';
+            document.getElementById('txtClienteNombre').value = '';
+            document.getElementById('txtClienteDireccion').value = '';
+            document.getElementById('btnLimpiarCliente').classList.add('d-none');
+        }
+
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('#txtClienteNombre') && !e.target.closest('#listResCliente')) {
+                document.getElementById('listResCliente').classList.add('d-none');
+            }
+        });
+
+        // BÚSQUEDA Y CREACIÓN DE PRODUCTOS TERMINADOS
+        function abrirBuscadorArticulosPT() {
+            const modal = new bootstrap.Modal(document.getElementById('modalBuscadorArticulosPT'));
+            modal.show();
+            buscarProductosTerminados();
+        }
+
+        async function buscarProductosTerminados() {
+            const subCatId = document.getElementById('ddlFiltroSubCatPT').value;
+            const q = document.getElementById('txtFiltroQueryPT').value.trim();
+            const tbody = document.getElementById('tbodyResultadosPT');
+
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-3"><span class="spinner-border spinner-border-sm me-1"></span> Buscando productos...</td></tr>';
+
+            const res = await fetch(`?handler=BuscarProductosTerminados&subCategoriaId=${subCatId}&query=${encodeURIComponent(q)}`);
+            if (res.ok) {
+                const lista = await res.json();
+                if (lista.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No se encontraron artículos que coincidan con la búsqueda.</td></tr>';
+                    return;
+                }
+
+                let html = '';
+                lista.forEach(p => {
+                    html += `
+                        <tr>
+                            <td class="fw-bold text-primary">${p.sku}</td>
+                            <td class="fw-bold text-dark">${p.nombre}</td>
+                            <td><small class="text-muted">${p.categoriaSubCat}</small></td>
+                            <td><span class="badge bg-secondary">${p.unidadMedida}</span></td>
+                            <td class="text-end fw-bold">${p.stockActual.toFixed(2)}</td>
+                            <td class="text-center">
+                                <button type="button" class="btn btn-sm btn-success fw-semibold" onclick='seleccionarEInsertarItem(${JSON.stringify(p)})'>
+                                    <i class="bi bi-plus-lg me-1"></i> Seleccionar
+                                </button>
+                            </td>
+                        </tr>`;
+                });
+                tbody.innerHTML = html;
+            }
+        }
+
+        function seleccionarEInsertarItem(p) {
+            agregarFilaItem(p.productoID, p.nombre, p.unidadMedida || 'UND', 1, p.precioSinIGV || 100.00);
+            bootstrap.Modal.getInstance(document.getElementById('modalBuscadorArticulosPT')).hide();
+        }
+
+        function abrirSubModalCrearOnTheFly() {
+            document.getElementById('ddlSubCatOnTheFly').value = "";
+            document.getElementById('txtSkuOnTheFly').value = "";
+            document.getElementById('txtNombreOnTheFly').value = "";
+
+            const subModal = new bootstrap.Modal(document.getElementById('modalCrearOnTheFlyPT'));
+            subModal.show();
+        }
+
+        async function autogenerarSkuOnTheFly() {
+            const subCatId = document.getElementById('ddlSubCatOnTheFly').value;
+            if (!subCatId) {
+                document.getElementById('txtSkuOnTheFly').value = "";
+                return;
+            }
+
+            const res = await fetch(`?handler=GenerarSkuPT&subCategoriaId=${subCatId}`);
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('txtSkuOnTheFly').value = data.sku;
+            }
+        }
+
+        async function guardarArticuloOnTheFly() {
+            const subCatId = parseInt(document.getElementById('ddlSubCatOnTheFly').value) || 0;
+            const sku = document.getElementById('txtSkuOnTheFly').value.trim();
+            const nombre = document.getElementById('txtNombreOnTheFly').value.trim();
+            const um = document.getElementById('ddlUmOnTheFly').value;
+            const controlaStock = document.getElementById('chkControlaStockOnTheFly').checked;
+
+            if (subCatId <= 0 || !nombre) {
+                alert("Por favor complete la SubCategoría y el Nombre del artículo.");
+                return;
+            }
+
+            const payload = {
+                SubcategoriaID: subCatId,
+                SKU: sku,
+                Nombre: nombre,
+                UnidadMedida: um,
+                ControlaStock: controlaStock,
+                StockActual: 0
+            };
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+            const res = await fetch('?handler=CrearProductoExpress', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': token
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                const result = await res.json();
+                if (result.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('modalCrearOnTheFlyPT')).hide();
+                    bootstrap.Modal.getInstance(document.getElementById('modalBuscadorArticulosPT')).hide();
+
+                    seleccionarEInsertarItem(result.producto);
+                } else {
+                    alert("Error: " + result.message);
+                }
+            }
+        }
+
+        // LÓGICA DE FILAS Y TOTALES DE COTIZACIÓN
+        function agregarFilaItem(prodId = 0, desc = '', um = 'UND', cant = 1, precio = 0) {
+            const tbody = document.getElementById('tbodyCotiz');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <input type="hidden" class="item-prod-id" value="${prodId}" />
+                    <input type="text" class="form-control form-control-sm item-desc" value="${desc}" placeholder="Descripción..." required />
+                </td>
+                <td><input type="text" class="form-control form-control-sm item-um text-center" value="${um}" required /></td>
+                <td><input type="number" step="0.01" min="0.01" class="form-control form-control-sm text-end item-cant" value="${cant}" oninput="recalcularTotales()" required /></td>
+                <td><input type="number" step="0.0001" min="0.0000" class="form-control form-control-sm text-end item-precio" value="${precio.toFixed(4)}" oninput="recalcularTotales()" required /></td>
+                <td class="text-end fw-bold text-primary item-subtotal">0.00</td>
+                <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarFila(this)"><i class="bi bi-trash"></i></button></td>
+            `;
+            tbody.appendChild(row);
+            recalcularTotales();
+        }
+
+        function eliminarFila(btn) {
+            btn.closest('tr').remove();
+            recalcularTotales();
+        }
+
+        function recalcularTotales() {
+            const moneda = document.getElementById('ddlMoneda').value;
+            const simbolo = moneda === 'USD' ? '$' : 'S/';
+            document.querySelectorAll('.simbolo-moneda').forEach(e => e.innerText = simbolo);
+
+            let subTotalGeneral = 0;
+            const filas = document.querySelectorAll('#tbodyCotiz tr');
+            const listaItems = [];
+
+            filas.forEach(f => {
+                const prodId = parseInt(f.querySelector('.item-prod-id').value) || 0;
+                const desc = f.querySelector('.item-desc').value;
+                const um = f.querySelector('.item-um').value;
+                const cant = parseFloat(f.querySelector('.item-cant').value) || 0;
+                const precio = parseFloat(f.querySelector('.item-precio').value) || 0;
+
+                const subTotalLinea = cant * precio;
+                subTotalGeneral += subTotalLinea;
+
+                f.querySelector('.item-subtotal').innerText = subTotalLinea.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                listaItems.push({
+                    ProductoID: prodId,
+                    DescripcionItem: desc,
+                    UnidadMedida: um,
+                    Cantidad: cant,
+                    PrecioUnitarioSinIGV: precio
+                });
+            });
+
+            const igv = subTotalGeneral * 0.18;
+            const total = subTotalGeneral + igv;
+
+            document.getElementById('lblSubTotal').innerText = subTotalGeneral.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('lblIGV').innerText = igv.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('lblTotal').innerText = total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            document.getElementById('txtItemsJson').value = JSON.stringify(listaItems);
+        }
+    </script>
+}

@@ -1,0 +1,226 @@
+﻿@page
+@model ERP.WEB.Pages.Produccion.Recetas.IndexModel
+@{
+    ViewData["Title"] = "Recetas de Producción";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold text-dark mb-0"><i class="bi bi-diagram-3-fill me-2 text-primary"></i>Recetas y Fórmulas (BOM)</h4>
+        <small class="text-muted">Lista de Fórmulas de Fabricación y Componentes por Producto Terminado</small>
+    </div>
+    <a asp-page="./Crear" class="btn btn-primary fw-semibold shadow-sm">
+        <i class="bi bi-plus-circle me-1"></i> Nueva Receta
+    </a>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+    <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>@Model.MensajeExito
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@Model.MensajeError
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- BUSCADOR / FILTRO -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body bg-light rounded-3 p-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-9">
+                <label class="form-label fw-semibold small text-muted mb-1">Buscar Receta o Producto Terminado</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" asp-for="Buscar" class="form-control" placeholder="Buscar por código SKU, nombre de producto o receta..." />
+                </div>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-secondary btn-sm fw-semibold w-100">
+                    <i class="bi bi-funnel me-1"></i> Filtrar
+                </button>
+                <a asp-page="./Index" class="btn btn-outline-secondary btn-sm fw-semibold" title="Limpiar filtro">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- TABLA DE RECETAS -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width: 110px;">SKU PT</th>
+                        <th>Producto Terminado (PT)</th>
+                        <th>Nombre de la Receta</th>
+                        <th class="text-center">Categoría / Subcat.</th>
+                        <th class="text-center">Componentes</th>
+                        <th class="text-end">Costo Est. (S/)</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-end" style="width: 130px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.ListaRecetas.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-2 d-block mb-2"></i> No se encontraron recetas o fórmulas registradas.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model.ListaRecetas)
+                        {
+                            <tr>
+                                <td><span class="badge bg-secondary font-monospace">@item.SKUPT</span></td>
+                                <td class="fw-bold text-dark">@item.NombrePT</td>
+                                <td class="text-primary fw-semibold">@item.NombreReceta</td>
+                                <td class="text-center">
+                                    <small class="d-block fw-semibold text-secondary">@item.CategoriaPT</small>
+                                    <small class="text-muted">@item.SubCategoriaPT</small>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-info text-dark font-monospace"><i class="bi bi-cpu me-1"></i>@item.TotalInsumos Insumos</span>
+                                </td>
+                                <td class="text-end fw-bold text-success">S/ @item.CostoEstimadoTotal.ToString("N2")</td>
+                                <td class="text-center">
+                                    @if (item.Estado)
+                                    {
+                                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Activo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Inactivo</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <button type="button" class="btn btn-sm btn-outline-info me-1" title="Ver Detalle" onclick="verDetalleReceta(@item.RecetaID)">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <form method="post" asp-page-handler="CambiarEstado" asp-route-recetaId="@item.RecetaID" class="d-inline">
+                                        <button type="submit" class="btn btn-sm @(item.Estado ? "btn-outline-danger" : "btn-outline-success")"
+                                                title="@(item.Estado ? "Desactivar Receta" : "Activar Receta")"
+                                                onclick="return confirm('¿Está seguro de cambiar el estado de esta receta?');">
+                                            <i class="bi @(item.Estado ? "bi-slash-circle" : "bi-check-lg")"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PARA CONSULTAR DETALLE DE LA RECETA -->
+<div class="modal fade" id="modalDetalleReceta" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white py-2">
+                <h6 class="modal-title fw-bold" id="modalTituloReceta">
+                    <i class="bi bi-diagram-3 me-2"></i> Detalle de Fórmula / BOM
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div class="alert alert-light border mb-3 p-2 rounded">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <small class="text-muted d-block">SKU Producto Terminado</small>
+                            <span class="badge bg-secondary font-monospace" id="modalSkuPT">-</span>
+                        </div>
+                        <div class="col-md-8">
+                            <small class="text-muted d-block">Producto Terminado</small>
+                            <span class="fw-bold text-dark" id="modalNombrePT">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold small text-muted mb-2">Componentes e Insumos de Producción:</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead class="table-secondary">
+                            <tr>
+                                <th>SKU Insumo</th>
+                                <th>Categoría / Subcat.</th>
+                                <th>Insumo</th>
+                                <th class="text-center">Cant. Requerida</th>
+                                <th class="text-end">Costo Est. (S/)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyModalDetalle">
+                            <!-- Filas insertadas dinámicamente -->
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-light fw-bold">
+                                <td colspan="4" class="text-end">Total Estimado en Insumos:</td>
+                                <td class="text-end text-success" id="modalTotalCosto">S/ 0.00</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function verDetalleReceta(recetaId) {
+            try {
+                const response = await fetch(`?handler=ObtenerDetalle&recetaId=${recetaId}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('modalTituloReceta').innerText = `Fórmula: ${data.nombreReceta}`;
+                    document.getElementById('modalSkuPT').innerText = data.skuPT;
+                    document.getElementById('modalNombrePT').innerText = data.nombrePT;
+
+                    const tbody = document.getElementById('tbodyModalDetalle');
+                    tbody.innerHTML = '';
+
+                    let total = 0;
+
+                    data.detalles.forEach(item => {
+                        total += item.subtotal;
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td><span class="badge bg-secondary font-monospace">${item.skuInsumo}</span></td>
+                            <td><small class="d-block fw-semibold">${item.categoria}</small><small class="text-muted">${item.subCategoria}</small></td>
+                            <td class="fw-bold text-dark">${item.nombreInsumo}</td>
+                            <td class="text-center fw-bold text-primary">${item.cantidad.toFixed(4)} ${item.unidadMedida}</td>
+                            <td class="text-end fw-semibold">S/ ${item.subtotal.toFixed(2)}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+
+                    document.getElementById('modalTotalCosto').innerText = `S/ ${total.toFixed(2)}`;
+
+                    const modal = new bootstrap.Modal(document.getElementById('modalDetalleReceta'));
+                    modal.show();
+                } else {
+                    alert(data.message || "Error al cargar la receta.");
+                }
+            } catch (err) {
+                alert("Error de conexión al obtener el detalle: " + err.message);
+            }
+        }
+    </script>
+}

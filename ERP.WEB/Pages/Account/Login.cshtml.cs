@@ -13,10 +13,13 @@ namespace ERP.WEB.Pages.Account
     public class LoginModel : PageModel
     {
         private readonly ApplicationDbContext _context;
+        private readonly SunatTcService _sunatTcService;
 
-        public LoginModel(ApplicationDbContext context)
+        // Inyección del DbContext y del servicio SunatTcService
+        public LoginModel(ApplicationDbContext context, SunatTcService sunatTcService)
         {
             _context = context;
+            _sunatTcService = sunatTcService;
         }
 
         [BindProperty]
@@ -93,6 +96,7 @@ namespace ERP.WEB.Pages.Account
             await HttpContext.SignInAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme,
                 new ClaimsPrincipal(claimsIdentity));
+
 
             return LocalRedirect(returnUrl);
         }

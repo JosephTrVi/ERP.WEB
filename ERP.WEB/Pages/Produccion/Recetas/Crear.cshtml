@@ -1,0 +1,493 @@
+﻿@page
+@model ERP.WEB.Pages.Produccion.Recetas.CrearModel
+@{
+    ViewData["Title"] = "Crear Receta de Producción";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold text-dark mb-0"><i class="bi bi-gear-wide-connected me-2 text-primary"></i>Módulo de Producción: Nueva Receta (BOM)</h4>
+        <small class="text-muted">Registro de Fórmulas y Lista de Materiales para la Planta de Fabricación</small>
+    </div>
+    <a asp-page="./Index" class="btn btn-outline-secondary btn-sm fw-semibold">
+        <i class="bi bi-arrow-left me-1"></i> Volver a Lista de Recetas
+    </a>
+</div>
+
+<!-- 1. SELECCIÓN DEL PRODUCTO TERMINADO -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-dark text-white py-2">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2"></i>1. Selección del Producto Terminado</h6>
+    </div>
+    <div class="card-body bg-light">
+        <!-- FILTROS OPCIONALES -->
+        <div class="row g-2 mb-3">
+            <div class="col-md-6">
+                <label class="form-label fw-semibold small text-muted mb-1">Filtrar por Categoría PT</label>
+                <select id="ddlCatPT" class="form-select form-select-sm" onchange="filtrarSubCatPT()">
+                    <option value="">-- Todas las Categorías --</option>
+                    @foreach (var cat in Model.CategoriasPT)
+                    {
+                        <option value="@cat.CategoriaID">[@cat.Codigo2Dig] @cat.Nombre</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label fw-semibold small text-muted mb-1">Filtrar por Subcategoría PT</label>
+                <select id="ddlSubCatPT" class="form-select form-select-sm">
+                    <option value="">-- Todas las Subcategorías --</option>
+                    @foreach (var sub in Model.SubCategoriasPT)
+                    {
+                        <option value="@sub.SubCategoriaID" data-cat="@sub.CategoriaID">[@sub.Codigo4Dig] @sub.Nombre</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <!-- BUSCADOR DE PRODUCTO TERMINADO -->
+        <div class="row g-2 mb-3 position-relative">
+            <div class="col-md-12">
+                <label class="form-label fw-semibold small">Buscar Producto Terminado (Escriba SKU o Nombre) <span class="text-danger">*</span></label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-search text-primary"></i></span>
+                    <input type="text" id="txtBuscarPT" class="form-control" placeholder="Escriba código SKU o nombre del producto..." autocomplete="off" oninput="buscarProductoPT()" />
+                    <button type="button" class="btn btn-outline-secondary d-none" id="btnLimpiarPT" onclick="limpiarSeleccionPT()">
+                        <i class="bi bi-x-circle me-1"></i> Cambiar
+                    </button>
+                </div>
+                <!-- Lista de Resultados flotante -->
+                <div id="listResPT" class="list-group position-absolute w-100 shadow-lg d-none" style="z-index: 1050; max-height: 220px; overflow-y: auto;"></div>
+            </div>
+        </div>
+
+        <input type="hidden" id="txtSelectedPTID" value="0" />
+
+        <div class="row g-2">
+            <div class="col-md-12">
+                <label class="form-label fw-semibold small">Nombre de la Receta / Fórmula <span class="text-danger">*</span></label>
+                <input type="text" id="txtNombreReceta" class="form-control form-control-sm" placeholder="Se autocompletará al seleccionar el Producto Terminado" />
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. INSUMOS Y COMPONENTES DE PRODUCCIÓN (SE HABILITA TRAS SELECCIONAR PT) -->
+<div class="card border-0 shadow-sm opacity-50" id="cardSeccionInsumos" style="pointer-events: none;">
+    <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-diagram-3 me-2"></i>2. Insumos y Componentes de Producción</h6>
+        <span class="badge bg-light text-dark fw-bold" id="badgeTotalItems">0 Componentes</span>
+    </div>
+    <div class="card-body">
+        <div class="p-3 border rounded bg-light mb-3">
+            <!-- FILTROS OPCIONALES INSUMO -->
+            <div class="row g-2 mb-2">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold small text-muted mb-1">Categoría Insumo</label>
+                    <select id="ddlCatInsumo" class="form-select form-select-sm" onchange="filtrarSubCatInsumo()">
+                        <option value="">-- Todas las Categorías --</option>
+                        @foreach (var cat in Model.CategoriasInsumo)
+                        {
+                            <option value="@cat.CategoriaID">[@cat.Codigo2Dig] @cat.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold small text-muted mb-1">Subcategoría Insumo</label>
+                    <select id="ddlSubCatInsumo" class="form-select form-select-sm">
+                        <option value="">-- Todas las Subcategorías --</option>
+                        @foreach (var sub in Model.SubCategoriasInsumo)
+                        {
+                            <option value="@sub.SubCategoriaID" data-cat="@sub.CategoriaID">[@sub.Codigo4Dig] @sub.Nombre</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <!-- BUSCADOR DE INSUMOS -->
+            <div class="row g-2 mb-2 position-relative">
+                <div class="col-md-12">
+                    <label class="form-label fw-semibold small">Buscar Insumo / Componente (SKU o Nombre)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="bi bi-search text-success"></i></span>
+                        <input type="text" id="txtBuscarInsumo" class="form-control" placeholder="Escriba código SKU o nombre del insumo..." autocomplete="off" oninput="buscarInsumo()" />
+                    </div>
+                    <div id="listResInsumo" class="list-group position-absolute w-100 shadow-lg d-none" style="z-index: 1050; max-height: 220px; overflow-y: auto;"></div>
+                </div>
+            </div>
+
+            <!-- DATOS DEL INSUMO SELECCIONADO -->
+            <input type="hidden" id="txtSelectedInsumoID" value="0" />
+            <input type="hidden" id="txtInsumoSKU" />
+            <input type="hidden" id="txtInsumoNombre" />
+            <input type="hidden" id="txtInsumoCat" />
+            <input type="hidden" id="txtInsumoSubCat" />
+            <input type="hidden" id="txtInsumoCosto" />
+
+            <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold small mb-1">Cant. Requerida</label>
+                    <input type="number" id="txtCantidadInsumo" class="form-control form-control-sm text-center fw-bold" step="0.0001" min="0.0001" value="1.0000" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold small mb-1">U.M.</label>
+                    <input type="text" id="txtUnidadInsumo" class="form-control form-control-sm bg-white text-center" readonly placeholder="UND" />
+                </div>
+                <div class="col-md-5">
+                    <button type="button" class="btn btn-success btn-sm w-100 fw-semibold" onclick="agregarInsumoTabla()">
+                        <i class="bi bi-plus-circle me-1"></i> Agregar a Fórmula
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABLA DE COMPONENTES -->
+        <div class="table-responsive">
+            <table class="table table-hover align-middle" id="tablaRecetaDetalle">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width: 120px;">Código SKU</th>
+                        <th>Categoría</th>
+                        <th>Subcategoría</th>
+                        <th>Insumo / Componente</th>
+                        <th class="text-center" style="width: 120px;">Cantidad</th>
+                        <th class="text-center" style="width: 90px;">U.M.</th>
+                        <th class="text-end" style="width: 120px;">Costo Est. (S/)</th>
+                        <th class="text-center" style="width: 80px;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="tbodyDetalles">
+                    <tr id="trVacio">
+                        <td colspan="8" class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox fs-3 d-block mb-1"></i> No se han agregado componentes a la receta aún.
+                        </td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr class="table-light fw-bold">
+                        <td colspan="6" class="text-end">Costo Estimado de Materiales:</td>
+                        <td class="text-end text-success fs-6" id="lblCostoTotal">S/ 0.00</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer bg-light text-end py-2">
+        <button type="button" class="btn btn-primary fw-semibold px-4" id="btnGuardarReceta" onclick="guardarReceta()">
+            <i class="bi bi-save me-1"></i> Registrar Receta de Producción
+        </button>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let detalleReceta = [];
+        let timerPT, timerInsumo;
+
+        // ===== 1. BUSCADOR Y SELECCIÓN DE PRODUCTO TERMINADO =====
+        function filtrarSubCatPT() {
+            const catId = document.getElementById('ddlCatPT').value;
+            const subCatSelect = document.getElementById('ddlSubCatPT');
+
+            Array.from(subCatSelect.options).forEach(opt => {
+                if (opt.value === "") {
+                    opt.style.display = "";
+                } else {
+                    opt.style.display = (catId === "" || opt.getAttribute('data-cat') === catId) ? "" : "none";
+                }
+            });
+            subCatSelect.value = "";
+        }
+
+        function buscarProductoPT() {
+            clearTimeout(timerPT);
+            const q = document.getElementById('txtBuscarPT').value.trim();
+            const catId = document.getElementById('ddlCatPT').value;
+            const subCatId = document.getElementById('ddlSubCatPT').value;
+            const listRes = document.getElementById('listResPT');
+
+            if (q.length < 2) {
+                listRes.classList.add('d-none');
+                return;
+            }
+
+            timerPT = setTimeout(async () => {
+                try {
+                    const resp = await fetch(`?handler=BuscarProductoPT&q=${encodeURIComponent(q)}&catId=${catId}&subCatId=${subCatId}`);
+                    const data = await resp.json();
+
+                    listRes.innerHTML = '';
+                    if (data.length === 0) {
+                        listRes.innerHTML = '<div class="list-group-item text-muted small">No se encontraron productos coincidentes.</div>';
+                    } else {
+                        data.forEach(item => {
+                            const a = document.createElement('a');
+                            a.href = '#';
+                            a.className = 'list-group-item list-group-item-action small fw-semibold';
+                            a.innerText = item.displayText;
+                            a.onclick = (e) => {
+                                e.preventDefault();
+                                seleccionarPT(item);
+                            };
+                            listRes.appendChild(a);
+                        });
+                    }
+                    listRes.classList.remove('d-none');
+                } catch (err) {
+                    console.error("Error buscando PT:", err);
+                }
+            }, 300);
+        }
+
+        function seleccionarPT(item) {
+            document.getElementById('txtSelectedPTID').value = item.id;
+            document.getElementById('txtBuscarPT').value = `[${item.sku}] ${item.nombre}`;
+            document.getElementById('txtBuscarPT').readOnly = true;
+            document.getElementById('btnLimpiarPT').classList.remove('d-none');
+            document.getElementById('listResPT').classList.add('d-none');
+
+            document.getElementById('txtNombreReceta').value = `Fórmula de Ensamblaje - ${item.nombre}`;
+
+            // Habilitar Sección 2
+            const cardInsumos = document.getElementById('cardSeccionInsumos');
+            cardInsumos.classList.remove('opacity-50');
+            cardInsumos.style.pointerEvents = 'auto';
+        }
+
+        function limpiarSeleccionPT() {
+            document.getElementById('txtSelectedPTID').value = '0';
+            document.getElementById('txtBuscarPT').value = '';
+            document.getElementById('txtBuscarPT').readOnly = false;
+            document.getElementById('btnLimpiarPT').classList.add('d-none');
+            document.getElementById('txtNombreReceta').value = '';
+
+            // Deshabilitar Sección 2
+            const cardInsumos = document.getElementById('cardSeccionInsumos');
+            cardInsumos.classList.add('opacity-50');
+            cardInsumos.style.pointerEvents = 'none';
+        }
+
+        // ===== 2. BUSCADOR Y SELECCIÓN DE INSUMOS =====
+        function filtrarSubCatInsumo() {
+            const catId = document.getElementById('ddlCatInsumo').value;
+            const subCatSelect = document.getElementById('ddlSubCatInsumo');
+
+            Array.from(subCatSelect.options).forEach(opt => {
+                if (opt.value === "") {
+                    opt.style.display = "";
+                } else {
+                    opt.style.display = (catId === "" || opt.getAttribute('data-cat') === catId) ? "" : "none";
+                }
+            });
+            subCatSelect.value = "";
+        }
+
+        function buscarInsumo() {
+            clearTimeout(timerInsumo);
+            const q = document.getElementById('txtBuscarInsumo').value.trim();
+            const catId = document.getElementById('ddlCatInsumo').value;
+            const subCatId = document.getElementById('ddlSubCatInsumo').value;
+            const listRes = document.getElementById('listResInsumo');
+
+            if (q.length < 2) {
+                listRes.classList.add('d-none');
+                return;
+            }
+
+            timerInsumo = setTimeout(async () => {
+                try {
+                    const resp = await fetch(`?handler=BuscarInsumo&q=${encodeURIComponent(q)}&catId=${catId}&subCatId=${subCatId}`);
+                    const data = await resp.json();
+
+                    listRes.innerHTML = '';
+                    if (data.length === 0) {
+                        listRes.innerHTML = '<div class="list-group-item text-muted small">No se encontraron insumos coincidentes.</div>';
+                    } else {
+                        data.forEach(item => {
+                            const a = document.createElement('a');
+                            a.href = '#';
+                            a.className = 'list-group-item list-group-item-action small fw-semibold';
+                            a.innerText = item.displayText;
+                            a.onclick = (e) => {
+                                e.preventDefault();
+                                seleccionarInsumo(item);
+                            };
+                            listRes.appendChild(a);
+                        });
+                    }
+                    listRes.classList.remove('d-none');
+                } catch (err) {
+                    console.error("Error buscando Insumo:", err);
+                }
+            }, 300);
+        }
+
+        function seleccionarInsumo(item) {
+            document.getElementById('txtSelectedInsumoID').value = item.id;
+            document.getElementById('txtInsumoSKU').value = item.sku;
+            document.getElementById('txtInsumoNombre').value = item.nombre;
+            document.getElementById('txtInsumoCat').value = item.categoria;
+            document.getElementById('txtInsumoSubCat').value = item.subcategoria;
+            document.getElementById('txtInsumoCosto').value = item.costoPromedio;
+            document.getElementById('txtUnidadInsumo').value = item.unidadMedida || 'UND';
+
+            document.getElementById('txtBuscarInsumo').value = `[${item.sku}] ${item.nombre}`;
+            document.getElementById('listResInsumo').classList.add('d-none');
+        }
+
+        // ===== 3. TABLA Y GUARDADO DE RECETA =====
+        function agregarInsumoTabla() {
+            const insumoID = parseInt(document.getElementById('txtSelectedInsumoID').value);
+            const cantidad = parseFloat(document.getElementById('txtCantidadInsumo').value);
+
+            if (!insumoID || isNaN(insumoID) || insumoID === 0) {
+                alert("Busque y seleccione un insumo de la lista.");
+                return;
+            }
+
+            if (isNaN(cantidad) || cantidad <= 0) {
+                alert("Ingrese una cantidad válida mayor a 0.");
+                return;
+            }
+
+            if (detalleReceta.some(d => d.insumoID === insumoID)) {
+                alert("El insumo ya se encuentra agregado en la receta.");
+                return;
+            }
+
+            const item = {
+                insumoID: insumoID,
+                sku: document.getElementById('txtInsumoSKU').value,
+                nombre: document.getElementById('txtInsumoNombre').value,
+                categoria: document.getElementById('txtInsumoCat').value,
+                subcategoria: document.getElementById('txtInsumoSubCat').value,
+                unidadMedida: document.getElementById('txtUnidadInsumo').value,
+                costo: parseFloat(document.getElementById('txtInsumoCosto').value) || 0,
+                cantidad: cantidad
+            };
+
+            detalleReceta.push(item);
+            renderizarTabla();
+
+            // Limpiar selección de insumo
+            document.getElementById('txtSelectedInsumoID').value = '0';
+            document.getElementById('txtBuscarInsumo').value = '';
+            document.getElementById('txtCantidadInsumo').value = '1.0000';
+            document.getElementById('txtUnidadInsumo').value = '';
+        }
+
+        function eliminarItem(insumoID) {
+            detalleReceta = detalleReceta.filter(d => d.insumoID !== insumoID);
+            renderizarTabla();
+        }
+
+        function renderizarTabla() {
+            const tbody = document.getElementById('tbodyDetalles');
+            tbody.innerHTML = '';
+
+            if (detalleReceta.length === 0) {
+                tbody.innerHTML = `
+                    <tr id="trVacio">
+                        <td colspan="8" class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox fs-3 d-block mb-1"></i> No se han agregado componentes a la receta aún.
+                        </td>
+                    </tr>`;
+                document.getElementById('badgeTotalItems').innerText = '0 Componentes';
+                document.getElementById('lblCostoTotal').innerText = 'S/ 0.00';
+                return;
+            }
+
+            let costoTotalReceta = 0;
+
+            detalleReceta.forEach((item) => {
+                const subtotal = item.costo * item.cantidad;
+                costoTotalReceta += subtotal;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><span class="badge bg-secondary font-monospace">${item.sku}</span></td>
+                    <td><small class="fw-semibold text-secondary">${item.categoria}</small></td>
+                    <td><small class="text-muted">${item.subcategoria}</small></td>
+                    <td class="fw-bold text-dark">${item.nombre}</td>
+                    <td class="text-center fw-bold text-primary">${item.cantidad.toFixed(4)}</td>
+                    <td class="text-center"><span class="badge bg-light text-dark border">${item.unidadMedida}</span></td>
+                    <td class="text-end fw-semibold">S/ ${subtotal.toFixed(2)}</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-outline-danger btn-sm p-1" onclick="eliminarItem(${item.insumoID})" title="Quitar">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('badgeTotalItems').innerText = `${detalleReceta.length} Componentes`;
+            document.getElementById('lblCostoTotal').innerText = `S/ ${costoTotalReceta.toFixed(2)}`;
+        }
+
+                async function guardarReceta() {
+            const ptID = parseInt(document.getElementById('txtSelectedPTID').value);
+            const nombreReceta = document.getElementById('txtNombreReceta').value.trim();
+
+            if (!ptID || isNaN(ptID) || ptID === 0) {
+                alert("Debe seleccionar un Producto Terminado mediante el buscador.");
+                return;
+            }
+
+            if (!nombreReceta) {
+                alert("Ingrese el nombre de la receta.");
+                return;
+            }
+
+            if (detalleReceta.length === 0) {
+                alert("Debe agregar al menos un insumo a la fórmula.");
+                return;
+            }
+
+            const payload = {
+                productoTerminadoID: ptID,
+                nombreReceta: nombreReceta,
+                detalles: detalleReceta.map(d => ({
+                    insumoID: d.insumoID,
+                    cantidad: d.cantidad,
+                    unidadMedida: d.unidadMedida
+                }))
+            };
+
+            try {
+                const response = await fetch('?handler=GuardarReceta', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    alert("Error del servidor: " + errorText);
+                    return;
+                }
+
+                const res = await response.json();
+                if (res.success) {
+                    window.location.href = res.redirectUrl;
+                } else {
+                    alert(res.message || "Error al registrar la receta.");
+                }
+            } catch (err) {
+                alert("Error de red: " + err.message);
+            }
+        }
+
+        // Ocultar listas al hacer clic fuera
+        document.addEventListener('click', function (e) {
+            if (!e.target.closest('#txtBuscarPT') && !e.target.closest('#listResPT')) {
+                document.getElementById('listResPT').classList.add('d-none');
+            }
+            if (!e.target.closest('#txtBuscarInsumo') && !e.target.closest('#listResInsumo')) {
+                document.getElementById('listResInsumo').classList.add('d-none');
+            }
+        });
+    </script>
+}

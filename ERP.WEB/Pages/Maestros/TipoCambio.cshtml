@@ -1,0 +1,214 @@
+﻿@page
+@model ERP.WEB.Pages.Maestros.TipoCambioModel
+@{
+    ViewData["Title"] = "Gestión de Tipo de Cambio";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold text-dark mb-0"><i class="bi bi-currency-dollar me-2 text-success"></i>Módulo de Tipo de Cambio</h4>
+        <small class="text-muted">Registro oficial de TC Compra / Venta (USD / PEN)</small>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-primary fw-semibold shadow-sm" onclick="abrirSunatYRegistrar()">
+            <i class="bi bi-box-arrow-up-right me-1"></i> Consultar SUNAT & Registrar
+        </button>
+        <button type="button" class="btn btn-success fw-semibold shadow-sm" onclick="abrirModalRegistro()">
+            <i class="bi bi-plus-lg me-1"></i> Registro Manual
+        </button>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+    <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>@Model.MensajeExito
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@Model.MensajeError
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- FILTRO PERÍODO -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body bg-light rounded-3 p-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label fw-semibold small text-muted mb-1">Año</label>
+                <select class="form-select form-select-sm" asp-for="Anio">
+                    @for (int a = DateTime.Now.Year; a >= 2020; a--)
+                    {
+                        <option value="@a">@a</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold small text-muted mb-1">Mes</label>
+                <select class="form-select form-select-sm" asp-for="Mes">
+                    <option value="1">Enero</option>
+                    <option value="2">Febrero</option>
+                    <option value="3">Marzo</option>
+                    <option value="4">Abril</option>
+                    <option value="5">Mayo</option>
+                    <option value="6">Junio</option>
+                    <option value="7">Julio</option>
+                    <option value="8">Agosto</option>
+                    <option value="9">Septiembre</option>
+                    <option value="10">Octubre</option>
+                    <option value="11">Noviembre</option>
+                    <option value="12">Diciembre</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-secondary btn-sm fw-semibold w-100">
+                    <i class="bi bi-search me-1"></i> Filtrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- TABLA DE HISTORIAL -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Monedas</th>
+                        <th class="text-end">TC Compra (S/)</th>
+                        <th class="text-end">TC Venta (S/)</th>
+                        <th class="text-center">Origen</th>
+                        <th class="text-end">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.HistorialTC.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-calendar-x fs-2 d-block mb-2"></i> No hay tipos de cambio registrados para este período.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var tc in Model.HistorialTC)
+                        {
+                            <tr>
+                                <td class="fw-bold text-primary">@tc.Fecha.ToString("dd/MM/yyyy")</td>
+                                <td><span class="badge bg-light text-dark border">@tc.MonedaOrigen / @tc.MonedaDestino</span></td>
+                                <td class="text-end fw-bold text-success">S/ @tc.PrecioCompra.ToString("N4")</td>
+                                <td class="text-end fw-bold text-danger">S/ @tc.PrecioVenta.ToString("N4")</td>
+                                <td class="text-center">
+                                    <span class="badge bg-secondary text-white"><i class="bi bi-pencil-square me-1"></i>@tc.OrigenData</span>
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-secondary" onclick='editarTc(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(tc)))'>
+                                        <i class="bi bi-pencil"></i> Editar
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE REGISTRO / EDICIÓN -->
+<div class="modal fade" id="modalRegistroTC" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white py-2">
+                <h6 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i> Registrar / Modificar Tipo de Cambio</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" asp-page-handler="GuardarManual">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Fecha <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" asp-for="NuevoTC.Fecha" id="txtFecha" required />
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">TC Compra (S/) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.0001" min="0.0001" class="form-control fw-bold text-success" asp-for="NuevoTC.PrecioCompra" id="txtCompra" placeholder="Ej: 3.7500" required />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">TC Venta (S/) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.0001" min="0.0001" class="form-control fw-bold text-danger" asp-for="NuevoTC.PrecioVenta" id="txtVenta" placeholder="Ej: 3.7580" required />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success btn-sm fw-semibold"><i class="bi bi-check-lg me-1"></i> Guardar TC</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Función para obtener la fecha de hoy en formato YYYY-MM-DD local
+        function obtenerFechaHoy() {
+            const hoy = new Date();
+            const anio = hoy.getFullYear();
+            const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+            const dia = String(hoy.getDate()).padStart(2, '0');
+            return `${anio}-${mes}-${dia}`;
+        }
+
+        // Abre el modal para registrar manualmente con la fecha actual
+        function abrirModalRegistro() {
+            const inputFecha = document.getElementById('txtFecha');
+
+            // Si la fecha está vacía o tiene el valor por defecto 0001-01-01, setear el día de hoy
+            if (!inputFecha.value || inputFecha.value.startsWith('0001') || inputFecha.value === '') {
+                inputFecha.value = obtenerFechaHoy();
+            }
+
+            // Limpiar los valores de compra y venta
+            document.getElementById('txtCompra').value = '';
+            document.getElementById('txtVenta').value = '';
+
+            const modal = new bootstrap.Modal(document.getElementById('modalRegistroTC'));
+            modal.show();
+        }
+
+        // Abre la página de SUNAT en una pestaña/ventana nueva y despliega el modal
+        function abrirSunatYRegistrar() {
+            // Abrir la consulta pública de SUNAT en una ventana/pestaña nueva
+            window.open('https://e-consulta.sunat.gob.pe/cl-at-ittipcam/tcS01Alias', '_blank', 'noopener,noreferrer');
+
+            // Desplegar el modal con la fecha actual ya colocada
+            abrirModalRegistro();
+        }
+
+        // Carga los datos existentes en el modal cuando se hace clic en "Editar"
+        function editarTc(tc) {
+            if (tc && tc.Fecha) {
+                // Formatear la fecha a YYYY-MM-DD
+                document.getElementById('txtFecha').value = tc.Fecha.split('T')[0];
+            } else {
+                document.getElementById('txtFecha').value = obtenerFechaHoy();
+            }
+
+            document.getElementById('txtCompra').value = tc.PrecioCompra;
+            document.getElementById('txtVenta').value = tc.PrecioVenta;
+
+            const modal = new bootstrap.Modal(document.getElementById('modalRegistroTC'));
+            modal.show();
+        }
+    </script>
+}
