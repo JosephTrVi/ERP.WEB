@@ -25,6 +25,8 @@ namespace ERP.WEB.Data
         public DbSet<Categoria> Categorias { get; set; } = null!;
         public DbSet<SubCategoria> SubCategorias { get; set; } = null!;
         public DbSet<Producto> Productos { get; set; } = null!;
+        public DbSet<Atributo> Atributos { get; set; } = null!;
+        public DbSet<ProductoAtributo> ProductoAtributos { get; set; } = null!;
 
         // Logistica
         public DbSet<RequerimientoCabecera> RequerimientosCabecera { get; set; } = null!;
@@ -119,6 +121,18 @@ namespace ERP.WEB.Data
                       .WithMany()
                       .HasForeignKey(d => d.SubcategoriaID)
                       .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Atributo>(entity =>
+            {
+                entity.ToTable("Atributos", "Inventario");
+                entity.HasKey(e => e.AtributoID);
+            });
+
+            modelBuilder.Entity<ProductoAtributo>(entity =>
+            {
+                entity.ToTable("ProductoAtributos", "Inventario");
+                entity.HasKey(e => e.ProductoAtributoID);
             });
 
             // Logistica

@@ -173,6 +173,9 @@
                                 <a asp-page="/Almacen/Articulos" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/almacen/articulos" ? "active-link" : "")">
                                     <i class="bi bi-tags me-2"></i> Catálogo de Artículos
                                 </a>
+                                <a asp-page="/Almacen/ArticuloAtributos" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/almacen/ArticuloAtributos" ? "active-link" : "")">
+                                    <i class="bi bi-card-checklist me-1 text-primary"></i> Atributos de Artículos
+                                </a>
                                 <a asp-page="/Almacen/BandejaRecepcion" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/almacen/bandejarecepcion" ? "active-link" : "")">
                                     <i class="bi bi-box-arrow-in-down me-2 text-success"></i> Recepción de Mercadería
                                 </a>
@@ -336,6 +339,9 @@
                                 </a>
                                 <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
                                     <i class="bi bi-sliders me-2"></i> Configuración ERP
+                                </a>
+                                <a class="nav-link text-dark fw-semibold" asp-page="/Sistemas/ImportarDatos">
+                                    <i class="bi bi-file-earmark-excel me-1 text-success"></i> Importar Datos
                                 </a>
                             </div>
                         </div>

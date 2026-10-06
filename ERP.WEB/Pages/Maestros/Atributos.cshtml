@@ -1,0 +1,205 @@
+﻿@page
+@model ERP.WEB.Pages.Maestros.AtributosModel
+@{
+    ViewData["Title"] = "Especificaciones y Atributos Técnicos";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold text-dark mb-0">
+            <i class="bi bi-tags me-2 text-primary"></i>Catálogo de Especificaciones Técnicas
+        </h4>
+        <small class="text-muted">Definición y filtrado de atributos dinámicos para productos e insumos</small>
+    </div>
+    <button class="btn btn-primary btn-sm fw-semibold shadow-sm" onclick="abrirModalNuevo()">
+        <i class="bi bi-plus-lg me-1"></i> Nueva Especificación
+    </button>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+    <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-check-circle me-1"></i> @Model.MensajeExito
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i> @Model.MensajeError
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- BARRA DE FILTROS -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body bg-light rounded-3 p-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label fw-semibold small text-muted mb-1"><i class="bi bi-folder me-1"></i>Categoría</label>
+                <select asp-for="CategoriaID" asp-items="Model.SelectCategorias" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">-- Todas las Categorías --</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold small text-muted mb-1"><i class="bi bi-folder2-open me-1"></i>Subcategoría</label>
+                <select asp-for="SubcategoriaID" asp-items="Model.SelectSubcategorias" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">-- Todas las Subcategorías --</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold small text-muted mb-1"><i class="bi bi-search me-1"></i>Buscar por Código / Nombre</label>
+                <input type="text" asp-for="Busqueda" class="form-control form-control-sm" placeholder="Ej: Porcentaje, Grasa, #1..." />
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm fw-semibold w-100">
+                    <i class="bi bi-funnel me-1"></i> Filtrar
+                </button>
+                <a asp-page="/Maestros/Atributos" class="btn btn-outline-secondary btn-sm" title="Limpiar Filtros">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre de Especificación / Atributo</th>
+                        <th>Unidad Medida</th>
+                        <th>Tipo de Dato</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.ListaAtributos.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                No se encontraron especificaciones técnicas registradas para los filtros seleccionados.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model.ListaAtributos)
+                        {
+                            <tr>
+                                <td class="fw-bold text-muted">#@item.AtributoID</td>
+                                <td class="fw-bold text-dark">@item.NombreAtributo</td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.UnidadMedida))
+                                    {
+                                        <span class="badge bg-secondary font-monospace">@item.UnidadMedida</span>
+                                    }
+                                    else
+                                    {
+                                        <small class="text-muted fst-italic">N/A</small>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border">@item.TipoDato</span>
+                                </td>
+                                <td class="text-center">
+                                    @if (item.Estado)
+                                    {
+                                        <span class="badge bg-success">Activo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">Inactivo</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-primary me-1" title="Editar" onclick='editarAtributo(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(item)))'>
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    <form method="post" asp-page-handler="CambiarEstado" asp-route-id="@item.AtributoID" class="d-inline">
+                                        <button type="submit" class="btn btn-sm @(item.Estado ? "btn-outline-danger" : "btn-outline-success")" title="@(item.Estado ? "Desactivar" : "Activar")">
+                                            <i class="bi @(item.Estado ? "bi-slash-circle" : "bi-check-circle")"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CREAR / EDITAR ATRIBUTO -->
+<div class="modal fade" id="modalAtributo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold" id="modalTitulo"><i class="bi bi-tag me-2"></i> Nueva Especificación</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" asp-page-handler="Guardar">
+                <input type="hidden" asp-for="AtributoForm.AtributoID" id="txtAtributoID" />
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nombre de la Especificación <span class="text-danger">*</span></label>
+                        <input type="text" asp-for="AtributoForm.NombreAtributo" id="txtNombreAtributo" class="form-control" placeholder="Ej: Porcentaje de Grasa, Grados Brix, Registro Sanitario..." required />
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Unidad de Medida</label>
+                            <input type="text" asp-for="AtributoForm.UnidadMedida" id="txtUnidadMedida" class="form-control" placeholder="Ej: %, °Bx, mm, Días..." />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Tipo de Dato <span class="text-danger">*</span></label>
+                            <select asp-for="AtributoForm.TipoDato" id="selectTipoDato" class="form-select" required>
+                                <option value="Texto">Texto</option>
+                                <option value="Decimal">Decimal</option>
+                                <option value="Numero">Número Entero</option>
+                                <option value="Booleano">Booleano (Sí/No)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light d-flex justify-content-between">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary fw-semibold">
+                        <i class="bi bi-save me-1"></i> Guardar Registro
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function abrirModalNuevo() {
+            document.getElementById('txtAtributoID').value = 0;
+            document.getElementById('txtNombreAtributo').value = '';
+            document.getElementById('txtUnidadMedida').value = '';
+            document.getElementById('selectTipoDato').value = 'Texto';
+            document.getElementById('modalTitulo').innerText = 'Nueva Especificación Técnica';
+
+            const modal = new bootstrap.Modal(document.getElementById('modalAtributo'));
+            modal.show();
+        }
+
+        function editarAtributo(item) {
+            document.getElementById('txtAtributoID').value = item.AtributoID || item.atributoID;
+            document.getElementById('txtNombreAtributo').value = item.NombreAtributo || item.nombreAtributo;
+            document.getElementById('txtUnidadMedida').value = item.UnidadMedida || item.unidadMedida || '';
+            document.getElementById('selectTipoDato').value = item.TipoDato || item.tipoDato || 'Texto';
+            document.getElementById('modalTitulo').innerText = 'Editar Especificación Técnica';
+
+            const modal = new bootstrap.Modal(document.getElementById('modalAtributo'));
+            modal.show();
+        }
+    </script>
+}

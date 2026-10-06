@@ -1,9 +1,10 @@
+using ERP.WEB.Data;
+using ERP.WEB.Models.Ventas;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using ERP.WEB.Data;
-using ERP.WEB.Models.Ventas;
 
 namespace ERP.WEB.Pages.Ventas
 {
@@ -17,8 +18,7 @@ namespace ERP.WEB.Pages.Ventas
             _context = context;
         }
 
-        // Propiedad requerida por la vista Razor
-        public List<CotizacionesCabecera> Pendientes { get; set; } = new();
+        public List<CotizacionesCabecera> ListaCotizaciones { get; set; } = new();
 
         [TempData]
         public string? MensajeExito { get; set; }
@@ -26,50 +26,90 @@ namespace ERP.WEB.Pages.Ventas
         [TempData]
         public string? MensajeError { get; set; }
 
+        // Filtros de Fecha (Año y Mes)
+        [BindProperty(SupportsGet = true)]
+        public int Anio { get; set; } = DateTime.Now.Year;
+
+        [BindProperty(SupportsGet = true)]
+        public int Mes { get; set; } = DateTime.Now.Month;
+
+        // Filtros adicionales
+        [BindProperty(SupportsGet = true)]
+        public string? EstadoFiltro { get; set; }
+
+        [BindProperty(SupportsGet = true)]
+        public string? Busqueda { get; set; }
+
+        public SelectList SelectAnios { get; set; } = null!;
+        public SelectList SelectMeses { get; set; } = null!;
+
         public async Task OnGetAsync()
         {
-            // Cargar únicamente las cotizaciones que están en estado 'Pendiente'
-            Pendientes = await _context.CotizacionesCabecera
+            CargarCombosFecha();
+
+            var query = _context.CotizacionesCabecera
                 .Include(c => c.Detalles)
-                .Where(c => c.Estado == "Pendiente")
                 .AsNoTracking()
+                .AsQueryable();
+
+            // 1. Filtro por Año (FechaEmision / FechaRegistro)
+            if (Anio > 0)
+            {
+                query = query.Where(c => c.FechaEmision.Year == Anio);
+            }
+
+            // 2. Filtro por Mes (0 = Todos los meses)
+            if (Mes > 0)
+            {
+                query = query.Where(c => c.FechaEmision.Month == Mes);
+            }
+
+            // 3. Filtro por Estado de Aprobación
+            if (!string.IsNullOrWhiteSpace(EstadoFiltro))
+            {
+                query = query.Where(c => c.Estado == EstadoFiltro);
+            }
+
+            // 4. Búsqueda por Código o Nombre del Cliente
+            if (!string.IsNullOrWhiteSpace(Busqueda))
+            {
+                string t = Busqueda.Trim().ToLower();
+                query = query.Where(c => c.Codigo.ToLower().Contains(t) ||
+                                         (c.ClienteNombre != null && c.ClienteNombre.ToLower().Contains(t)));
+            }
+
+            ListaCotizaciones = await query
                 .OrderByDescending(c => c.FechaEmision)
                 .ToListAsync();
         }
 
-        public async Task<IActionResult> OnPostProcesarAsync(int cotizacionId, string accion, string? comentario)
+        private void CargarCombosFecha()
         {
-            var cotizacion = await _context.CotizacionesCabecera.FindAsync(cotizacionId);
-
-            if (cotizacion == null)
+            int anioActual = DateTime.Now.Year;
+            var listaAnios = new List<int>();
+            for (int i = anioActual; i >= 2022; i--)
             {
-                MensajeError = "La cotización especificada no existe.";
-                return RedirectToPage();
+                listaAnios.Add(i);
             }
+            SelectAnios = new SelectList(listaAnios, Anio);
 
-            if (accion == "Aprobar")
+            var listaMeses = new[]
             {
-                cotizacion.Estado = "Aprobado";
-                cotizacion.FechaAprobacion = DateTime.Now;
-                cotizacion.ComentarioAprobacion = comentario;
-                cotizacion.AprobadorID = 1; // ID de usuario según sesión
-
-                MensajeExito = $"La Cotización {cotizacion.Codigo} ha sido APROBADA exitosamente.";
-            }
-            else if (accion == "Rechazar")
-            {
-                cotizacion.Estado = "Rechazado";
-                cotizacion.FechaAprobacion = DateTime.Now;
-                cotizacion.ComentarioAprobacion = comentario;
-                cotizacion.AprobadorID = 1;
-
-                MensajeExito = $"La Cotización {cotizacion.Codigo} ha sido RECHAZADA.";
-            }
-
-            _context.CotizacionesCabecera.Update(cotizacion);
-            await _context.SaveChangesAsync();
-
-            return RedirectToPage();
+                new { Id = 0, Nombre = "-- Todos los Meses --" },
+                new { Id = 1, Nombre = "Enero" },
+                new { Id = 2, Nombre = "Febrero" },
+                new { Id = 3, Nombre = "Marzo" },
+                new { Id = 4, Nombre = "Abril" },
+                new { Id = 5, Nombre = "Mayo" },
+                new { Id = 6, Nombre = "Junio" },
+                new { Id = 7, Nombre = "Julio" },
+                new { Id = 8, Nombre = "Agosto" },
+                new { Id = 9, Nombre = "Septiembre" },
+                new { Id = 10, Nombre = "Octubre" },
+                new { Id = 11, Nombre = "Noviembre" },
+                new { Id = 12, Nombre = "Diciembre" }
+            };
+            SelectMeses = new SelectList(listaMeses, "Id", "Nombre", Mes);
         }
     }
 }

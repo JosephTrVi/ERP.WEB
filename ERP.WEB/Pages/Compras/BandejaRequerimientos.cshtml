@@ -33,23 +33,31 @@
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body bg-light rounded-3 p-3">
         <form method="get" class="row g-2 align-items-end">
-            <div class="col-md-3">
+            <div class="col-md-2">
+                <label class="form-label fw-semibold small text-muted mb-1"><i class="bi bi-calendar-event me-1"></i>Año</label>
+                <select asp-for="Anio" asp-items="Model.SelectAnios" class="form-select form-select-sm" onchange="this.form.submit()"></select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold small text-muted mb-1"><i class="bi bi-calendar-month me-1"></i>Mes</label>
+                <select asp-for="Mes" asp-items="Model.SelectMeses" class="form-select form-select-sm" onchange="this.form.submit()"></select>
+            </div>
+            <div class="col-md-2">
                 <label class="form-label fw-semibold small text-muted mb-1">Tipo de Requerimiento</label>
-                <select class="form-select form-select-sm" asp-for="TipoFiltro">
+                <select class="form-select form-select-sm" asp-for="TipoFiltro" onchange="this.form.submit()">
                     <option value="">-- Todos los Tipos --</option>
                     <option value="Nacional">📦 Compras Nacionales</option>
                     <option value="Importacion">🚢 Importaciones</option>
-                    <option value="Servicio">🛠️️ Servicios</option>
+                    <option value="Servicio">🛠 Servicios</option>
                 </select>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <label class="form-label fw-semibold small text-muted mb-1">Buscar por Código / Sustento</label>
                 <div class="input-group input-group-sm">
                     <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
                     <input type="text" class="form-control" asp-for="Busqueda" placeholder="Ej: REQ-2026-0001..." />
                 </div>
             </div>
-            <div class="col-md-3 d-flex gap-1">
+            <div class="col-md-2 d-flex gap-1">
                 <button type="submit" class="btn btn-primary btn-sm fw-semibold w-100">
                     <i class="bi bi-funnel me-1"></i> Filtrar
                 </button>
@@ -83,7 +91,7 @@
                         <tr>
                             <td colspan="7" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox fs-2 d-block mb-2"></i>
-                                No hay requerimientos aprobados pendientes de emisión de OC.
+                                No hay requerimientos aprobados pendientes de emisión de OC para el periodo seleccionado.
                             </td>
                         </tr>
                     }
@@ -189,7 +197,7 @@
             document.getElementById('lblSustento').innerText = (req.Observaciones || req.observaciones) || 'Sin observaciones.';
             document.getElementById('lblComentarioJefe').innerText = (req.ComentarioAprobacion || req.comentarioAprobacion) || 'Aprobado sin comentarios.';
 
-            document.getElementById('btnIrAGenerarOC').href = `/Compras/GenerarOC/${reqId}`;
+            document.getElementById('btnIrAGenerarOC').href = `/Compras/GenerarOC?requerimientoId=${reqId}`;
 
             const tbody = document.getElementById('tbodyDetallesModal');
             tbody.innerHTML = '';

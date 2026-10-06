@@ -1,0 +1,127 @@
+﻿@page
+@model ERP.WEB.Pages.Sistemas.ImportarDatosModel
+@{
+    ViewData["Title"] = "Importación Masiva de Datos";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold text-dark mb-0"><i class="bi bi-file-earmark-excel me-2 text-success"></i>Importación Masiva de Datos</h4>
+        <small class="text-muted">Módulo de Sistemas para la carga inicial de catálogos e información maestra</small>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+    <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-check-circle me-1"></i> @Model.MensajeExito
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i> @Model.MensajeError
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-dark text-white py-2">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-upload me-2"></i>Cargar Archivo de Datos</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" asp-page-handler="ProcesarImportacion">
+
+                    <!-- 1. SELECCIÓN DE ENTIDAD -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">1. Seleccione el tipo de catálogo a importar</label>
+                        <div class="input-group">
+                            <select id="selectTipoEntidad" asp-for="TipoEntidad" class="form-select" onchange="actualizarBotonPlantilla()">
+                                <option value="Productos">Productos e Insumos</option>
+                                <option value="Categorias">Categorías</option>
+                                <option value="SubCategorias">SubCategorías</option>
+                                <option value="Clientes">Clientes</option>
+                                <option value="Proveedores">Proveedores</option>
+                            </select>
+
+                            <!-- BOTÓN DINÁMICO DE DESCARGA DE PLANTILLA -->
+                            <a id="btnDescargarPlantilla" href="#" class="btn btn-outline-success fw-semibold" title="Descargar plantilla de ejemplo para Excel">
+                                <i class="bi bi-download me-1"></i> Plantilla
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- 2. ADJUNTAR ARCHIVO -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">2. Adjunte el archivo con los datos (.csv / .xlsx)</label>
+                        <input type="file" asp-for="ArchivoExcel" class="form-control" accept=".xlsx, .xls, .csv" required />
+                    </div>
+
+                    <button type="submit" class="btn btn-success fw-semibold w-100">
+                        <i class="bi bi-cloud-upload me-1"></i> Iniciar Importación
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm bg-light">
+            <div class="card-body">
+                <h6 class="fw-bold text-dark mb-2"><i class="bi bi-info-circle text-primary me-2"></i>Instrucciones de Importación</h6>
+                <p class="small text-muted mb-3">Descargue la plantilla correspondiente antes de cargar la información para asegurarse de mantener el formato exacto de las columnas:</p>
+
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered bg-white small mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Entidad</th>
+                                <th>Columnas de la Plantilla</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Productos</strong></td>
+                                <td><code>SKU, Nombre, Descripcion, CategoriaID, SubcategoriaID, UnidadMedida, StockMinimo, StockMaximo, StockActual, CostoPromedio, PrecioVenta, ControlaStock</code></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Categorías</strong></td>
+                                <td><code>Codigo, CodigoPrefijo, Nombre, Descripcion, EsReceta, EsComponente</code></td>
+                            </tr>
+                            <tr>
+                                <td><strong>SubCategorías</strong></td>
+                                <td><code>CategoriaID, Codigo, CodigoPrefijo, Nombre, EsReceta, EsComponente</code></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Clientes</strong></td>
+                                <td><code>TipoCliente, TipoDocumento, NumDocumento, RazonSocial, NombreComercial, PaisCodigo, UbigeoID, Direccion, Telefono, EmailContacto, LineaCredito, MonedaCredito, FormaPagoHabitual</code></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Proveedores</strong></td>
+                                <td><code>TipoProveedor, TipoDocumento, NumDocumento, RazonSocial, NombreComercial, PaisCodigo, UbigeoID, Direccion, Telefono, EmailContacto, MonedaHabitual, FormaPagoHabitual</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function actualizarBotonPlantilla() {
+            const entidad = document.getElementById('selectTipoEntidad').value;
+            const btn = document.getElementById('btnDescargarPlantilla');
+            btn.href = `/Sistemas/ImportarDatos?handler=DescargarPlantilla&entidad=${entidad}`;
+        }
+
+        // Ejecutar al cargar la página
+        document.addEventListener('DOMContentLoaded', function () {
+            actualizarBotonPlantilla();
+        });
+    </script>
+}

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ERP.WEB.Data;
 using ERP.WEB.Models.Produccion;
@@ -22,6 +23,15 @@ namespace ERP.WEB.Pages.Produccion.Recetas
         [BindProperty(SupportsGet = true)]
         public string? Buscar { get; set; }
 
+        [BindProperty(SupportsGet = true)]
+        public int? CategoriaID { get; set; }
+
+        [BindProperty(SupportsGet = true)]
+        public int? SubcategoriaID { get; set; }
+
+        public SelectList SelectCategorias { get; set; } = null!;
+        public SelectList SelectSubcategorias { get; set; } = null!;
+
         [TempData]
         public string? MensajeExito { get; set; }
 
@@ -30,6 +40,19 @@ namespace ERP.WEB.Pages.Produccion.Recetas
 
         public async Task OnGetAsync()
         {
+            await CargarCombosFiltroAsync();
+
+            // Solo consulta si el usuario ha presionado el botón "Filtrar"
+            bool esPeticionFiltrada = Request.Query.ContainsKey("Buscar") ||
+                                     Request.Query.ContainsKey("CategoriaID") ||
+                                     Request.Query.ContainsKey("SubcategoriaID");
+
+            if (!esPeticionFiltrada)
+            {
+                ListaRecetas = new List<RecetaItemDTO>();
+                return;
+            }
+
             var query = _context.Recetas
                 .Include(r => r.ProductoTerminado)
                     .ThenInclude(p => p!.Categoria)
@@ -37,15 +60,26 @@ namespace ERP.WEB.Pages.Produccion.Recetas
                     .ThenInclude(p => p!.SubCategoria)
                 .Include(r => r.Detalles)
                     .ThenInclude(d => d.Insumo)
-                .AsNoTracking();
+                .AsNoTracking()
+                .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(Buscar))
             {
                 string filtro = Buscar.Trim().ToLower();
                 query = query.Where(r =>
                     r.NombreReceta.ToLower().Contains(filtro) ||
-                    r.ProductoTerminado!.SKU.ToLower().Contains(filtro) ||
-                    r.ProductoTerminado!.Nombre.ToLower().Contains(filtro));
+                    (r.ProductoTerminado != null && r.ProductoTerminado.SKU.ToLower().Contains(filtro)) ||
+                    (r.ProductoTerminado != null && r.ProductoTerminado.Nombre.ToLower().Contains(filtro)));
+            }
+
+            if (CategoriaID.HasValue && CategoriaID.Value > 0)
+            {
+                query = query.Where(r => r.ProductoTerminado != null && r.ProductoTerminado.CategoriaID == CategoriaID.Value);
+            }
+
+            if (SubcategoriaID.HasValue && SubcategoriaID.Value > 0)
+            {
+                query = query.Where(r => r.ProductoTerminado != null && r.ProductoTerminado.SubcategoriaID == SubcategoriaID.Value);
             }
 
             ListaRecetas = await query
@@ -67,6 +101,56 @@ namespace ERP.WEB.Pages.Produccion.Recetas
                 .ToListAsync();
         }
 
+        // ENDPOINT JSON: Carga únicamente las subcategorías hijas de la categoría seleccionada
+        public async Task<JsonResult> OnGetSubcategoriasPorCategoriaAsync(int categoriaId)
+        {
+            var querySubcat = _context.SubCategorias
+                .Where(s => s.Estado && s.EsReceta)
+                .AsQueryable();
+
+            if (categoriaId > 0)
+            {
+                querySubcat = querySubcat.Where(s => s.CategoriaID == categoriaId);
+            }
+
+            var subcategorias = await querySubcat
+                .OrderBy(s => s.Nombre)
+                .Select(s => new {
+                    value = s.SubCategoriaID,
+                    text = $"[{s.Codigo}] {s.Nombre}"
+                })
+                .ToListAsync();
+
+            return new JsonResult(subcategorias);
+        }
+
+        private async Task CargarCombosFiltroAsync()
+        {
+            var categorias = await _context.Categorias
+                .Where(c => c.Estado && c.EsReceta)
+                .OrderBy(c => c.Nombre)
+                .Select(c => new { c.CategoriaID, Nombre = $"[{c.Codigo}] {c.Nombre}" })
+                .ToListAsync();
+
+            SelectCategorias = new SelectList(categorias, "CategoriaID", "Nombre", CategoriaID);
+
+            var querySubcat = _context.SubCategorias
+                .Where(s => s.Estado && s.EsReceta)
+                .AsQueryable();
+
+            if (CategoriaID.HasValue && CategoriaID.Value > 0)
+            {
+                querySubcat = querySubcat.Where(s => s.CategoriaID == CategoriaID.Value);
+            }
+
+            var subcategorias = await querySubcat
+                .OrderBy(s => s.Nombre)
+                .Select(s => new { s.SubCategoriaID, Nombre = $"[{s.Codigo}] {s.Nombre}" })
+                .ToListAsync();
+
+            SelectSubcategorias = new SelectList(subcategorias, "SubCategoriaID", "Nombre", SubcategoriaID);
+        }
+
         public async Task<IActionResult> OnPostCambiarEstadoAsync(int recetaId)
         {
             var receta = await _context.Recetas.FindAsync(recetaId);
@@ -81,22 +165,7 @@ namespace ERP.WEB.Pages.Produccion.Recetas
             await _context.SaveChangesAsync();
 
             MensajeExito = $"El estado de la receta '{receta.NombreReceta}' fue actualizado correctamente.";
-            return RedirectToPage();
-        }
-
-        public class RecetaItemDTO
-        {
-            public int RecetaID { get; set; }
-            public string NombreReceta { get; set; } = string.Empty;
-            public int ProductoTerminadoID { get; set; }
-            public string SKUPT { get; set; } = string.Empty;
-            public string NombrePT { get; set; } = string.Empty;
-            public string CategoriaPT { get; set; } = string.Empty;
-            public string SubCategoriaPT { get; set; } = string.Empty;
-            public int TotalInsumos { get; set; }
-            public decimal CostoEstimadoTotal { get; set; }
-            public DateTime FechaCreacion { get; set; }
-            public bool Estado { get; set; }
+            return RedirectToPage(new { Buscar, CategoriaID, SubcategoriaID });
         }
 
         public async Task<IActionResult> OnGetObtenerDetalleAsync(int recetaId)
@@ -141,6 +210,21 @@ namespace ERP.WEB.Pages.Produccion.Recetas
             };
 
             return new JsonResult(result);
+        }
+
+        public class RecetaItemDTO
+        {
+            public int RecetaID { get; set; }
+            public string NombreReceta { get; set; } = string.Empty;
+            public int ProductoTerminadoID { get; set; }
+            public string SKUPT { get; set; } = string.Empty;
+            public string NombrePT { get; set; } = string.Empty;
+            public string CategoriaPT { get; set; } = string.Empty;
+            public string SubCategoriaPT { get; set; } = string.Empty;
+            public int TotalInsumos { get; set; }
+            public decimal CostoEstimadoTotal { get; set; }
+            public DateTime FechaCreacion { get; set; }
+            public bool Estado { get; set; }
         }
     }
 }

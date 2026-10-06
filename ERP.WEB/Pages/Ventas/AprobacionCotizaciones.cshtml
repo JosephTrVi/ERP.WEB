@@ -1,16 +1,69 @@
 ﻿@page
 @model ERP.WEB.Pages.Ventas.AprobacionCotizacionesModel
 @{
-    ViewData["Title"] = "Aprobación de Cotizaciones - Gerencia";
+    ViewData["Title"] = "Aprobación de Cotizaciones";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-        <h4 class="fw-bold text-dark mb-0"><i class="bi bi-shield-check me-2 text-primary"></i>Aprobación de Cotizaciones</h4>
-        <small class="text-muted">Bandeja de Gerencia de Ventas para autorizar propuestas comerciales</small>
+        <h4 class="fw-bold text-dark mb-0"><i class="bi bi-check2-square me-2 text-primary"></i>Aprobación de Cotizaciones</h4>
+        <small class="text-muted">Bandeja de revisión de propuestas comerciales para Gerencia de Ventas</small>
     </div>
 </div>
 
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+    <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-check-circle me-1"></i> @Model.MensajeExito
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i> @Model.MensajeError
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- BARRA DE FILTROS -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body bg-light rounded-3 p-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label fw-semibold small text-muted mb-1"><i class="bi bi-calendar-event me-1"></i>Año</label>
+                <select asp-for="Anio" asp-items="Model.SelectAnios" class="form-select form-select-sm" onchange="this.form.submit()"></select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-semibold small text-muted mb-1"><i class="bi bi-calendar-month me-1"></i>Mes</label>
+                <select asp-for="Mes" asp-items="Model.SelectMeses" class="form-select form-select-sm" onchange="this.form.submit()"></select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold small text-muted mb-1">Estado</label>
+                <select class="form-select form-select-sm" asp-for="EstadoFiltro" onchange="this.form.submit()">
+                    <option value="">-- Todos los Estados --</option>
+                    <option value="Pendiente">Pendiente de Aprobación</option>
+                    <option value="Aprobada">Aprobada</option>
+                    <option value="Rechazada">Rechazada</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold small text-muted mb-1">Buscar Código / Cliente</label>
+                <input type="text" class="form-control form-control-sm" asp-for="Busqueda" placeholder="Ej: COT-2026-0001..." />
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm fw-semibold w-100">
+                    <i class="bi bi-funnel me-1"></i> Filtrar
+                </button>
+                <a asp-page="/Ventas/AprobacionCotizaciones" class="btn btn-outline-secondary btn-sm" title="Limpiar Filtros">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- TABLA DE COTIZACIONES -->
 <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
         <div class="table-responsive">
@@ -18,37 +71,58 @@
                 <thead class="table-light">
                     <tr>
                         <th>Código</th>
-                        <th>Cliente</th>
+                        <th>Cliente / Razón Social</th>
                         <th>Fecha Emisión</th>
-                        <th>Fecha Entrega</th>
-                        <th class="text-end">Total Propuesta</th>
+                        <th>Moneda</th>
+                        <th class="text-end">Total Sin IGV</th>
+                        <th class="text-end">Total General</th>
                         <th class="text-center">Estado</th>
-                        <th class="text-end">Acción Gerencial</th>
+                        <th class="text-end">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @if (!Model.Pendientes.Any())
+                    @if (!Model.ListaCotizaciones.Any())
                     {
-                        <tr><td colspan="7" class="text-center py-5 text-muted"><i class="bi bi-check-circle fs-2 d-block text-success mb-2"></i> No hay cotizaciones pendientes de aprobación gerencial.</td></tr>
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                                No se encontraron cotizaciones para el periodo seleccionado.
+                            </td>
+                        </tr>
                     }
                     else
                     {
-                        @foreach (var c in Model.Pendientes)
+                        @foreach (var cot in Model.ListaCotizaciones)
                         {
-                            string sim = c.Moneda == "USD" ? "$" : "S/";
+                            string simbolo = cot.Moneda == "USD" ? "$" : "S/";
                             <tr>
-                                <td class="fw-bold text-primary">@c.Codigo</td>
-                                <td class="fw-bold text-dark">@c.ClienteNombre</td>
-                                <td><small class="text-muted">@c.FechaEmision.ToString("dd/MM/yyyy")</small></td>
-                                <td><small class="fw-semibold text-dark">@c.FechaEntregaAprox.ToString("dd/MM/yyyy")</small></td>
-                                <td class="text-end fw-bold text-success">@sim @c.Total.ToString("N2")</td>
-                                <td class="text-center"><span class="badge bg-warning text-dark">Pendiente</span></td>
+                                <td class="fw-bold text-primary">@cot.Codigo</td>
+                                <td>
+                                    <div class="fw-bold text-dark">@cot.ClienteNombre</div>
+                                    <small class="text-muted">@cot.ClienteDireccion</small>
+                                </td>
+                                <td><small class="text-dark fw-semibold">@cot.FechaEmision.ToString("dd/MM/yyyy")</small></td>
+                                <td><span class="badge bg-light text-dark border">@cot.Moneda</span></td>
+                                <td class="text-end fw-semibold">@simbolo @cot.SubTotal.ToString("N2")</td>
+                                <td class="text-end fw-bold text-success">@simbolo @cot.Total.ToString("N2")</td>
+                                <td class="text-center">
+                                    @if (cot.Estado == "Aprobada")
+                                    {
+                                        <span class="badge bg-success">Aprobada</span>
+                                    }
+                                    else if (cot.Estado == "Rechazada")
+                                    {
+                                        <span class="badge bg-danger">Rechazada</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">Pendiente</span>
+                                    }
+                                </td>
                                 <td class="text-end">
-                                    <form method="post" asp-page-handler="Procesar" class="d-inline">
-                                        <input type="hidden" name="cotizacionId" value="@c.CotizacionID" />
-                                        <button type="submit" name="accion" value="Aprobar" class="btn btn-sm btn-success fw-semibold me-1"><i class="bi bi-check-lg"></i> Aprobar</button>
-                                        <button type="submit" name="accion" value="Rechazar" class="btn btn-sm btn-outline-danger fw-semibold"><i class="bi bi-x-lg"></i> Rechazar</button>
-                                    </form>
+                                    <a asp-page="/Ventas/DetalleCotizacion" asp-route-id="@cot.CotizacionID" class="btn btn-sm btn-outline-info p-1" title="Ver / Revisar">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
                                 </td>
                             </tr>
                         }

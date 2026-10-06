@@ -30,22 +30,31 @@
     </div>
 }
 
-<!-- BUSCADOR / FILTRO -->
+<!-- BARRA DE FILTROS -->
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body bg-light rounded-3 p-3">
         <form method="get" class="row g-2 align-items-end">
-            <div class="col-md-9">
-                <label class="form-label fw-semibold small text-muted mb-1">Buscar Receta o Producto Terminado</label>
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" asp-for="Buscar" class="form-control" placeholder="Buscar por código SKU, nombre de producto o receta..." />
-                </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold small text-muted mb-1"><i class="bi bi-folder me-1"></i>Categoría Receta</label>
+                <select id="ddlCategoria" asp-for="CategoriaID" asp-items="Model.SelectCategorias" class="form-select form-select-sm">
+                    <option value="">-- Todas las Categorías --</option>
+                </select>
             </div>
-            <div class="col-md-3 d-flex gap-2">
-                <button type="submit" class="btn btn-secondary btn-sm fw-semibold w-100">
+            <div class="col-md-3">
+                <label class="form-label fw-semibold small text-muted mb-1"><i class="bi bi-folder2-open me-1"></i>Subcategoría Receta</label>
+                <select id="ddlSubcategoria" asp-for="SubcategoriaID" asp-items="Model.SelectSubcategorias" class="form-select form-select-sm">
+                    <option value="">-- Todas las Subcategorías --</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold small text-muted mb-1"><i class="bi bi-search me-1"></i>Buscar Receta o Producto</label>
+                <input type="text" asp-for="Buscar" class="form-control form-control-sm" placeholder="Buscar por código SKU, producto o receta..." />
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm fw-semibold w-100">
                     <i class="bi bi-funnel me-1"></i> Filtrar
                 </button>
-                <a asp-page="./Index" class="btn btn-outline-secondary btn-sm fw-semibold" title="Limpiar filtro">
+                <a asp-page="/Produccion/Recetas/Index" class="btn btn-outline-secondary btn-sm" title="Limpiar Filtros">
                     <i class="bi bi-arrow-counterclockwise"></i>
                 </a>
             </div>
@@ -75,7 +84,8 @@
                     {
                         <tr>
                             <td colspan="8" class="text-center py-5 text-muted">
-                                <i class="bi bi-inbox fs-2 d-block mb-2"></i> No se encontraron recetas o fórmulas registradas.
+                                <i class="bi bi-funnel fs-2 d-block mb-2 text-secondary"></i>
+                                <span>Utilice los filtros superiores (Categoría, Subcategoría o Búsqueda) para consultar las recetas registradas.</span>
                             </td>
                         </tr>
                     }
@@ -183,44 +193,28 @@
 
 @section Scripts {
     <script>
-        async function verDetalleReceta(recetaId) {
+        document.getElementById('ddlCategoria').addEventListener('change', async function () {
+            const categoriaId = this.value;
+            const subcatSelect = document.getElementById('ddlSubcategoria');
+
+            // Resetear desplegable de subcategorías
+            subcatSelect.innerHTML = '<option value="">-- Todas las Subcategorías --</option>';
+
             try {
-                const response = await fetch(`?handler=ObtenerDetalle&recetaId=${recetaId}`);
-                const data = await response.json();
-
-                if (data.success) {
-                    document.getElementById('modalTituloReceta').innerText = `Fórmula: ${data.nombreReceta}`;
-                    document.getElementById('modalSkuPT').innerText = data.skuPT;
-                    document.getElementById('modalNombrePT').innerText = data.nombrePT;
-
-                    const tbody = document.getElementById('tbodyModalDetalle');
-                    tbody.innerHTML = '';
-
-                    let total = 0;
-
-                    data.detalles.forEach(item => {
-                        total += item.subtotal;
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td><span class="badge bg-secondary font-monospace">${item.skuInsumo}</span></td>
-                            <td><small class="d-block fw-semibold">${item.categoria}</small><small class="text-muted">${item.subCategoria}</small></td>
-                            <td class="fw-bold text-dark">${item.nombreInsumo}</td>
-                            <td class="text-center fw-bold text-primary">${item.cantidad.toFixed(4)} ${item.unidadMedida}</td>
-                            <td class="text-end fw-semibold">S/ ${item.subtotal.toFixed(2)}</td>
-                        `;
-                        tbody.appendChild(tr);
+                // Realizar la petición AJAX al handler OnGetSubcategoriasPorCategoria
+                const response = await fetch(`?handler=SubcategoriasPorCategoria&categoriaId=${categoriaId || 0}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    data.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.value;
+                        option.textContent = item.text;
+                        subcatSelect.appendChild(option);
                     });
-
-                    document.getElementById('modalTotalCosto').innerText = `S/ ${total.toFixed(2)}`;
-
-                    const modal = new bootstrap.Modal(document.getElementById('modalDetalleReceta'));
-                    modal.show();
-                } else {
-                    alert(data.message || "Error al cargar la receta.");
                 }
-            } catch (err) {
-                alert("Error de conexión al obtener el detalle: " + err.message);
+            } catch (error) {
+                console.error('Error al cargar las subcategorías:', error);
             }
-        }
+        });
     </script>
 }

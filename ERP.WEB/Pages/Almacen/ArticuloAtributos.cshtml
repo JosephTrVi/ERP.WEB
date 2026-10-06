@@ -1,0 +1,170 @@
+﻿@page
+@model ERP.WEB.Pages.Almacen.ArticulosAtributosModel
+@{
+    ViewData["Title"] = "Atributos de Artículos";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold text-dark mb-0">
+            <i class="bi bi-card-checklist me-2 text-primary"></i>Especificaciones y Atributos de Artículos
+        </h4>
+        <small class="text-muted">Asignación de atributos técnicos e información de calidad por artículo en Almacén</small>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+    <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-check-circle me-1"></i> @Model.MensajeExito
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i> @Model.MensajeError
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- FILTROS Y SELECCIÓN DE ARTÍCULO -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body bg-light rounded-3 p-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label fw-semibold small text-muted mb-1"><i class="bi bi-folder me-1"></i>Categoría</label>
+                <select asp-for="CategoriaID" asp-items="Model.SelectCategorias" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">-- Todas las Categorías --</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold small text-muted mb-1"><i class="bi bi-folder2-open me-1"></i>Subcategoría</label>
+                <select asp-for="SubcategoriaID" asp-items="Model.SelectSubcategorias" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">-- Todas las Subcategorías --</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold small text-muted mb-1"><i class="bi bi-search me-1"></i>Buscar por SKU / Nombre</label>
+                <input type="text" asp-for="Busqueda" class="form-control form-control-sm" placeholder="Ej: Carne, 0105..." />
+            </div>
+            <div class="col-md-3 d-flex gap-1">
+                <button type="submit" class="btn btn-primary btn-sm fw-semibold w-100">
+                    <i class="bi bi-funnel me-1"></i> Filtrar
+                </button>
+                <a asp-page="/Almacen/ArticulosAtributos" class="btn btn-outline-secondary btn-sm" title="Limpiar Filtros">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </a>
+            </div>
+
+            <div class="col-md-12 mt-2">
+                <label class="form-label fw-semibold small text-dark mb-1"><i class="bi bi-box-seam me-1"></i>Artículo / Insumo Filtrado <span class="text-danger">*</span></label>
+                <select asp-for="ProductoID" asp-items="Model.SelectProductos" class="form-select form-select-sm fw-semibold" onchange="this.form.submit()">
+                    <option value="0">-- Seleccione un Artículo de la Lista --</option>
+                </select>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (Model.ProductoSeleccionado != null)
+{
+    <div class="row">
+        <!-- AGREGAR / EDITAR ATRIBUTO -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-dark text-white py-2">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-plus-circle me-2"></i>Asignar Especificación</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" asp-page-handler="AgregarAtributo">
+                        <input type="hidden" asp-for="NuevoAtributo.ProductoID" value="@Model.ProductoSeleccionado.ProductoID" />
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small">Atributo / Característica <span class="text-danger">*</span></label>
+                            <select asp-for="NuevoAtributo.AtributoID" asp-items="Model.SelectAtributos" class="form-select form-select-sm" required>
+                                <option value="">-- Seleccionar --</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small">Valor de Especificación <span class="text-danger">*</span></label>
+                            <input type="text" asp-for="NuevoAtributo.ValorAtributo" class="form-control form-control-sm" placeholder="Ej: 15.5, Cumple, PET..." required />
+                        </div>
+
+                        <button type="submit" class="btn btn-success btn-sm fw-semibold w-100">
+                            <i class="bi bi-save me-1"></i> Guardar Atributo
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- TABLA DE ESPECIFICACIONES ASIGNADAS -->
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="fw-bold text-dark">SKU: @Model.ProductoSeleccionado.SKU</span> |
+                        <span class="text-primary fw-semibold">@Model.ProductoSeleccionado.Nombre</span>
+                    </div>
+                    <span class="badge bg-secondary">U.M. @Model.ProductoSeleccionado.UnidadMedida</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Especificación</th>
+                                    <th>Valor</th>
+                                    <th>Unidad</th>
+                                    <th>Tipo Dato</th>
+                                    <th class="text-end">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (!Model.ListaAtributosAsignados.Any())
+                                {
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted">
+                                            <i class="bi bi-info-circle d-block fs-3 mb-1"></i>
+                                            Este artículo aún no tiene especificaciones técnicas registradas.
+                                        </td>
+                                    </tr>
+                                }
+                                else
+                                {
+                                    @foreach (var item in Model.ListaAtributosAsignados)
+                                    {
+                                        <tr>
+                                            <td class="fw-bold text-dark">@(item.Atributo != null ? item.Atributo.NombreAtributo : "-")</td>
+                                            <td class="fw-bold text-primary">@item.ValorAtributo</td>
+                                            <td>
+                                                @if (item.Atributo != null && !string.IsNullOrEmpty(item.Atributo.UnidadMedida))
+                                                {
+                                                    <span class="badge bg-light text-dark border">@item.Atributo.UnidadMedida</span>
+                                                }
+                                                else
+                                                {
+                                                    <small class="text-muted">-</small>
+                                                }
+                                            </td>
+                                            <td><small class="text-muted">@(item.Atributo != null ? item.Atributo.TipoDato : "-")</small></td>
+                                            <td class="text-end">
+                                                <form method="post" asp-page-handler="EliminarAtributo" asp-route-id="@item.ProductoAtributoID" asp-route-productoId="@Model.ProductoSeleccionado.ProductoID" class="d-inline">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger p-1" title="Eliminar" onclick="return confirm('¿Desea retirar esta especificación?')">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
