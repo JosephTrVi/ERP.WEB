@@ -137,7 +137,7 @@
 
             <!-- MENÚ PRINCIPAL AGRUPADO POR ÁREAS -->
             <div class="sidebar-menu p-2">
-                <div class="text-uppercase fs-8 fw-bold text-muted px-3 my-2 tracking-wider">Módulos Corporativos</div>
+                <div class="text-uppercase fs-8 fw-bold text-white-50 px-3 my-2 tracking-wider">Módulos Corporativos</div>
 
                 <div class="accordion accordion-flush" id="accordionSidebar">
 
@@ -161,36 +161,30 @@
                         </div>
                     </div>
 
-                    <!-- 2. ALMACÉN E INVENTARIO -->
+                    <!-- 2. MÓDULO ALMACÉN / INVENTARIO -->
                     <div class="accordion-item bg-transparent border-0">
                         <h2 class="accordion-header">
                             <button class="accordion-button @(esAlmacen ? "" : "collapsed") bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuAlmacen" aria-expanded="@(esAlmacen ? "true" : "false")">
-                                <i class="bi bi-box-seam text-success me-2 fs-6"></i>
+                                <i class="bi bi-box-seam text-info me-2 fs-6"></i>
                                 <span>Almacén</span>
                             </button>
                         </h2>
                         <div id="menuAlmacen" class="accordion-collapse collapse @(esAlmacen ? "show" : "")" data-bs-parent="#accordionSidebar">
                             <div class="accordion-body p-0 ps-3 my-1">
-                                <a asp-page="/Almacen/Categorias" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/almacen/categorias" ? "active-link" : "")">
-                                    <i class="bi bi-folder-symlink me-2"></i> Categorías / SubCat.
+                                <a asp-page="/Almacen/Solicitudes/Index" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/almacen/solicitudes/index" || pagePath == "/almacen/solicitudes" ? "active-link" : "")">
+                                    <i class="bi bi-box-arrow-up-right text-warning me-2"></i> Solicitudes de Insumos
                                 </a>
-                                <a asp-page="/Almacen/Articulos" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/almacen/articulos" ? "active-link" : "")">
-                                    <i class="bi bi-tags me-2"></i> Catálogo de Artículos
+                                <a asp-page="/Almacen/Productos/Index" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/almacen/productos/index" || pagePath == "/almacen/productos" ? "active-link" : "")">
+                                    <i class="bi bi-boxes me-2"></i> Catálogo de Productos / Insumos
                                 </a>
-                                <a asp-page="/Almacen/ArticuloAtributos" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/almacen/articuloatributos" ? "active-link" : "")">
-                                    <i class="bi bi-card-checklist me-1 text-primary"></i> Atributos de Artículos
-                                </a>
-                                <a asp-page="/Almacen/BandejaRecepcion" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/almacen/bandejarecepcion" ? "active-link" : "")">
-                                    <i class="bi bi-box-arrow-in-down me-2 text-success"></i> Recepción de Mercadería
-                                </a>
-                                <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
-                                    <i class="bi bi-journal-bookmark me-2"></i> Kárdex / Movimientos
+                                <a asp-page="/Almacen/Kardex/Index" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/almacen/kardex/index" || pagePath == "/almacen/kardex" ? "active-link" : "")">
+                                    <i class="bi bi-journal-text me-2"></i> Movimientos / Kardex
                                 </a>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 3. MÓDULO DE PRODUCCIÓN (HABILITADO Y CORREGIDO) -->
+                    <!-- 3. MÓDULO DE PRODUCCIÓN -->
                     <div class="accordion-item bg-transparent border-0">
                         <h2 class="accordion-header">
                             <button class="accordion-button @(esProduccion ? "" : "collapsed") bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuProduccion" aria-expanded="@(esProduccion ? "true" : "false")">
@@ -200,7 +194,7 @@
                         </h2>
                         <div id="menuProduccion" class="accordion-collapse collapse @(esProduccion ? "show" : "")" data-bs-parent="#accordionSidebar">
                             <div class="accordion-body p-0 ps-3 my-1">
-                                                                <a asp-page="/Produccion/Recetas/Index" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/produccion/recetas/index" || pagePath == "/produccion/recetas" ? "active-link" : "")">
+                                <a asp-page="/Produccion/Recetas/Index" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/produccion/recetas/index" || pagePath == "/produccion/recetas" ? "active-link" : "")">
                                     <i class="bi bi-diagram-3 me-2"></i> Recetas y Fórmulas (BOM)
                                 </a>
                                 <a asp-page="/Produccion/Recetas/Crear" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/produccion/recetas/crear" ? "active-link" : "")">

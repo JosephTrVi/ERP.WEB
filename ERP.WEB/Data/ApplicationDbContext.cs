@@ -55,6 +55,8 @@ namespace ERP.WEB.Data
 
         public DbSet<OrdenProduccion> OrdenesProduccion { get; set; } = null!;
         public DbSet<OrdenProduccionConsumo> OrdenesProduccionConsumos { get; set; } = null!;
+
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using ERP.WEB.Data;
 using ERP.WEB.Models.Ventas;
 
+
 namespace ERP.WEB.Pages.Ventas
 {
     [Authorize]
@@ -20,6 +21,9 @@ namespace ERP.WEB.Pages.Ventas
 
         public CotizacionesCabecera Cotizacion { get; set; } = default!;
 
+        // Propiedad requerida por DetalleCotizacion.cshtml para el Stock Actual
+        public Dictionary<int, decimal> StocksProductos { get; set; } = new();
+
         [TempData]
         public string? MensajeExito { get; set; }
 
@@ -28,6 +32,7 @@ namespace ERP.WEB.Pages.Ventas
 
         public async Task<IActionResult> OnGetAsync(int id)
         {
+            // 1. Obtener la Cotización seleccionada con sus detalles
             var cot = await _context.CotizacionesCabecera
                 .Include(c => c.Detalles)
                 .FirstOrDefaultAsync(c => c.CotizacionID == id);
@@ -38,71 +43,54 @@ namespace ERP.WEB.Pages.Ventas
                 return RedirectToPage("/Ventas/AprobacionCotizaciones");
             }
 
-            // Opcional: Si tienes el stock en la tabla de Articulos/Productos, 
-            // EF Core cargará la información para relacionarla en la vista.
             Cotizacion = cot;
+
+            // 2. Extraer los IDs de Artículos/Productos cotizados
+            var productoIds = Cotizacion.Detalles
+                .Where(d => d.ProductoID.HasValue)
+                .Select(d => d.ProductoID!.Value)
+                .Distinct()
+                .ToList();
+
+            // 3. Cargar el stock disponible de cada producto en el diccionario
+            if (productoIds.Any())
+            {
+                StocksProductos = await _context.Productos
+                    .Where(a => productoIds.Contains(a.ProductoID))
+                    .AsNoTracking()
+                    .ToDictionaryAsync(a => a.ProductoID, a => a.StockActual);
+            }
+
             return Page();
         }
+
         public async Task<IActionResult> OnPostAprobarAsync(int cotizacionId)
         {
-            try
+            var cot = await _context.CotizacionesCabecera.FindAsync(cotizacionId);
+            if (cot != null)
             {
-                var cotizacion = await _context.CotizacionesCabecera
-                    .FirstOrDefaultAsync(c => c.CotizacionID == cotizacionId);
-
-                if (cotizacion == null)
-                {
-                    MensajeError = "La cotización no fue encontrada.";
-                    return RedirectToPage("/Ventas/AprobacionCotizaciones");
-                }
-
-                if (cotizacion.Estado == "Aprobada")
-                {
-                    MensajeError = "La cotización ya se encuentra aprobada.";
-                    return RedirectToPage(new { id = cotizacionId });
-                }
-
-                cotizacion.Estado = "Aprobada";
-                cotizacion.FechaAprobacion = DateTime.Now;
-
-                _context.CotizacionesCabecera.Update(cotizacion);
+                cot.Estado = "Aprobada";
+                cot.FechaAprobacion = DateTime.Now;
+                _context.CotizacionesCabecera.Update(cot);
                 await _context.SaveChangesAsync();
+                MensajeExito = $"La cotización #{cot.Codigo} ha sido aprobada comercialmente.";
+            }
 
-                MensajeExito = $"La Cotización #{cotizacion.Codigo} fue APROBADA exitosamente y quedó lista para Producción.";
-                return RedirectToPage("/Ventas/AprobacionCotizaciones");
-            }
-            catch (Exception ex)
-            {
-                MensajeError = $"Error al aprobar la cotización: {ex.Message}";
-                return RedirectToPage(new { id = cotizacionId });
-            }
+            return RedirectToPage("/Ventas/AprobacionCotizaciones");
         }
 
         public async Task<IActionResult> OnPostRechazarAsync(int cotizacionId)
         {
-            try
+            var cot = await _context.CotizacionesCabecera.FindAsync(cotizacionId);
+            if (cot != null)
             {
-                var cotizacion = await _context.CotizacionesCabecera
-                    .FirstOrDefaultAsync(c => c.CotizacionID == cotizacionId);
-
-                if (cotizacion == null)
-                {
-                    MensajeError = "La cotización no fue encontrada.";
-                    return RedirectToPage("/Ventas/AprobacionCotizaciones");
-                }
-
-                cotizacion.Estado = "Rechazada";
-                _context.CotizacionesCabecera.Update(cotizacion);
+                cot.Estado = "Rechazada";
+                _context.CotizacionesCabecera.Update(cot);
                 await _context.SaveChangesAsync();
+                MensajeExito = $"La cotización #{cot.Codigo} ha sido rechazada.";
+            }
 
-                MensajeExito = $"La Cotización #{cotizacion.Codigo} fue RECHAZADA.";
-                return RedirectToPage("/Ventas/AprobacionCotizaciones");
-            }
-            catch (Exception ex)
-            {
-                MensajeError = $"Error al rechazar la cotización: {ex.Message}";
-                return RedirectToPage(new { id = cotizacionId });
-            }
+            return RedirectToPage("/Ventas/AprobacionCotizaciones");
         }
     }
 }

@@ -1,0 +1,176 @@
+﻿@page
+@model ERP.WEB.Pages.Almacen.Solicitudes.IndexModel
+@{
+    ViewData["Title"] = "Solicitudes de Insumos - Almacén";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold text-dark mb-0">
+            <i class="bi bi-box-arrow-up-right me-2 text-primary"></i>Gestión de Solicitudes y Despachos de Insumos
+        </h4>
+        <small class="text-muted">Bandeja de recepción de requerimientos de Planta y entrega de materiales</small>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+    <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-check-circle-fill me-1"></i> @Model.MensajeExito
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i> @Model.MensajeError
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- SECCIÓN 1: SOLICITUDES PENDIENTES DE DESPACHO (REQUERIDAS POR PLANTA) -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-warning text-dark py-2 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2"></i>Solicitudes Pendientes de Aprobación & Despacho</h6>
+        <span class="badge bg-dark text-white">@Model.SolicitudesPendientes.Count Pendientes</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small">
+                    <tr>
+                        <th style="width: 40px;"></th>
+                        <th>Orden Producción</th>
+                        <th>Cotización / Cliente</th>
+                        <th>Fecha Solicitud</th>
+                        <th class="text-center">Ítems Solicitados</th>
+                        <th class="text-end">Acción de Almacén</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.SolicitudesPendientes.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                <i class="bi bi-check2-all fs-3 d-block mb-1 text-success"></i>
+                                No hay solicitudes pendientes de insumos por despachar.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var sol in Model.SolicitudesPendientes)
+                        {
+                            string targetId = $"solDetail_{sol.OrdenProduccionID}";
+                            <tr>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-light p-0 text-primary" type="button" data-bs-toggle="collapse" data-bs-target="#@targetId">
+                                        <i class="bi bi-chevron-down fs-6"></i>
+                                    </button>
+                                </td>
+                                <td class="fw-bold text-dark">OP-@(sol.OrdenProduccionID.ToString("D5"))</td>
+                                <td>
+                                    <div class="fw-bold text-primary">@(sol.Cotizacion?.Codigo ?? "Interna")</div>
+                                    <small class="text-muted">@(sol.Cotizacion?.ClienteNombre ?? "Producción de Stock")</small>
+                                </td>
+                                <td><small class="text-muted">@sol.FechaEmision.ToString("dd/MM/yyyy HH:mm")</small></td>
+                                <td class="text-center"><span class="badge bg-info text-dark">@sol.Consumos.Count Insumos</span></td>
+                                <td class="text-end">
+                                    <form method="post" asp-page-handler="AprobarDespacho" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="ordenId" value="@sol.OrdenProduccionID" />
+                                        <button type="submit" class="btn btn-sm btn-success fw-bold" onclick="return confirm('¿Confirma que los materiales fueron entregados físicamente a Planta? Se descontarán del inventario.');">
+                                            <i class="bi bi-check-circle me-1"></i> Aprobar, Descontar & Generar Vale
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+
+                            <!-- DETALLE DESPLEGABLE DE MATERIALES SOLICITADOS -->
+                            <tr class="collapse bg-light" id="@targetId">
+                                <td colspan="6" class="p-3">
+                                    <div class="card border shadow-sm">
+                                        <div class="card-header bg-white py-1">
+                                            <small class="fw-bold text-dark"><i class="bi bi-box-seam me-1 text-primary"></i> Lista de Materiales Requeridos por Planta</small>
+                                        </div>
+                                        <div class="card-body p-0">
+                                            <table class="table table-sm mb-0 bg-white align-middle">
+                                                <thead class="table-light fs-8 text-uppercase">
+                                                    <tr>
+                                                        <th class="ps-3">Insumo / Material</th>
+                                                        <th class="text-center">U.M.</th>
+                                                        <th class="text-end">Cantidad Solicitada</th>
+                                                        <th class="text-end pe-3">Stock Actual Almacén</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="fs-7">
+                                                    @foreach (var c in sol.Consumos)
+                                                    {
+                                                        string nombreInsumo = Model.NombresProductos.ContainsKey(c.InsumoID) ? Model.NombresProductos[c.InsumoID] : "Insumo #" + c.InsumoID;
+                                                        decimal stockActual = Model.StocksActuales.ContainsKey(c.InsumoID) ? Model.StocksActuales[c.InsumoID] : 0;
+                                                        bool suficiente = stockActual >= c.CantidadRequerida;
+
+                                                        <tr>
+                                                            <td class="ps-3 fw-bold text-dark">@nombreInsumo</td>
+                                                            <td class="text-center"><span class="badge bg-light text-dark border">@c.UnidadMedida</span></td>
+                                                            <td class="text-end fw-bold text-primary">@c.CantidadRequerida.ToString("N2")</td>
+                                                            <td class="text-end pe-3">
+                                                                <span class="badge @(suficiente ? "bg-success" : "bg-danger")">
+                                                                    @stockActual.ToString("N2") @c.UnidadMedida
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- SECCIÓN 2: HISTORIAL DE DESPACHOS ATENDIDOS -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-dark text-white py-2">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-journal-check me-2"></i>Historial Reciente de Despachos Entregados</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small">
+                    <tr>
+                        <th>N° Orden</th>
+                        <th>Cotización</th>
+                        <th>Fecha Requerimiento</th>
+                        <th class="text-center">Estado OP</th>
+                        <th class="text-end">Documento</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var desp in Model.DespachosRealizados)
+                    {
+                        <tr>
+                            <td class="fw-bold text-dark">OP-@(desp.OrdenProduccionID.ToString("D5"))</td>
+                            <td><span class="badge bg-light text-dark border">@(desp.Cotizacion?.Codigo ?? "Interna")</span></td>
+                            <td><small class="text-muted">@desp.FechaEmision.ToString("dd/MM/yyyy HH:mm")</small></td>
+                            <td class="text-center">
+                                <span class="badge @(desp.Estado == "Finalizada" ? "bg-success" : "bg-primary")">@desp.Estado</span>
+                            </td>
+                            <td class="text-end">
+                                <a asp-page="/Produccion/Ordenes/NotaSalida" asp-route-id="@desp.OrdenProduccionID" target="_blank" class="btn btn-sm btn-outline-dark">
+                                    <i class="bi bi-file-earmark-pdf me-1"></i> Vale de Salida NS-OP
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

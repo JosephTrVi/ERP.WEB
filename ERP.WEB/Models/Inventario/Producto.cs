@@ -31,7 +31,7 @@ namespace ERP.WEB.Models.Inventario
         public bool ControlaStock { get; set; } = true;
 
         [Column(TypeName = "decimal(12, 4)")]
-        public decimal StockActual { get; set; } = 0;
+        public decimal StockActual { get; set; }
 
         [Column(TypeName = "decimal(12, 4)")]
         public decimal StockMinimo { get; set; } = 0;

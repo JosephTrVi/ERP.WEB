@@ -111,7 +111,7 @@
                         <th>Descripción del Ítem</th>
                         <th class="text-center" style="width: 90px;">U.M.</th>
                         <th class="text-end" style="width: 120px;">Cant. Requerida</th>
-                        <th class="text-center" style="width: 150px;">Disponibilidad / Stock</th>
+                        <th class="text-center" style="width: 160px;">Disponibilidad / Stock</th>
                         <th class="text-end" style="width: 150px;">Precio Unit. (Sin IGV)</th>
                         <th class="text-end" style="width: 160px;">SubTotal</th>
                     </tr>
@@ -122,10 +122,14 @@
                         int index = 1;
                         foreach (var item in Model.Cotizacion.Detalles)
                         {
-                            // Nota: Si consultas el stock desde el modelo de Artículos/Productos:
-                            // decimal stockDisponible = item.Producto?.StockActual ?? 0;
-                            // Por ahora simularemos la lógica de validación visual:
-                            bool hayStock = true; // Cambiar por: (stockDisponible >= item.Cantidad)
+                            // Obtener la cantidad de stock real desde el diccionario del PageModel
+                            decimal stockActual = 0;
+                            if (item.ProductoID.HasValue && Model.StocksProductos != null && Model.StocksProductos.ContainsKey(item.ProductoID.Value))
+                            {
+                                stockActual = Model.StocksProductos[item.ProductoID.Value];
+                            }
+
+                            bool hayStockSuficiente = stockActual >= item.Cantidad;
 
                             <tr>
                                 <td class="text-center fw-bold text-muted">@index</td>
@@ -139,20 +143,17 @@
                                 <td class="text-center"><span class="badge bg-light text-dark border">@item.UnidadMedida</span></td>
                                 <td class="text-end fw-bold text-dark">@item.Cantidad.ToString("N2")</td>
 
-                                <!-- COLUMNA DE ESTADO DE STOCK -->
-                                <td class="text-center">
-                                    @if (hayStock)
-                                    {
-                                        <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
-                                            <i class="bi bi-check-circle-fill me-1"></i> Con Stock
+                                <!-- COLUMNA DE CANTIDAD DE STOCK REAL EN ALMACÉN -->
+                                <td class="text-center fw-semibold">
+                                    <div class="d-inline-block text-center">
+                                        <span class="badge @(hayStockSuficiente ? "bg-success" : "bg-danger") fs-7">
+                                            @stockActual.ToString("N2") @item.UnidadMedida
                                         </span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">
-                                            <i class="bi bi-exclamation-triangle-fill me-1"></i> Sin Stock
-                                        </span>
-                                    }
+                                        @if (!hayStockSuficiente)
+                                        {
+                                            <small class="d-block text-danger fs-8 fw-semibold mt-1">(Faltan @((item.Cantidad - stockActual).ToString("N2")))</small>
+                                        }
+                                    </div>
                                 </td>
 
                                 <td class="text-end fw-semibold">@simbolo @item.PrecioUnitarioSinIGV.ToString("N2")</td>
