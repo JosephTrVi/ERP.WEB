@@ -1,0 +1,195 @@
+﻿@page
+@model ERP.WEB.Pages.Produccion.Ordenes.IndexModel
+@{
+    ViewData["Title"] = "Gestión de Órdenes de Producción & MRP";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold text-dark mb-0"><i class="bi bi-gear-wide-connected me-2 text-primary"></i>Órdenes de Producción & MRP</h4>
+        <small class="text-muted">Procesamiento de cotizaciones aprobadas, consulta de stock y explosión de materiales</small>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.MensajeExito))
+{
+    <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-check-circle me-1"></i> @Model.MensajeExito
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i> @Model.MensajeError
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- SECCIÓN 1: COTIZACIONES APROBADAS PENDIENTES DE PRODUCCIÓN CON DETALLE DE STOCK -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2"></i>Cotizaciones Aprobadas Pendientes de Producción</h6>
+        <span class="badge bg-light text-primary">@Model.CotizacionesAprobadas.Count Pendientes</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small">
+                    <tr>
+                        <th style="width: 40px;"></th>
+                        <th>Código Cotización</th>
+                        <th>Cliente</th>
+                        <th>Fecha Aprobación</th>
+                        <th class="text-center">Ítems</th>
+                        <th class="text-end">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.CotizacionesAprobadas.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                <i class="bi bi-check-all fs-3 d-block mb-1 text-success"></i>
+                                No hay cotizaciones pendientes por procesar en Producción.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var cot in Model.CotizacionesAprobadas)
+                        {
+                            string targetId = $"cotDetail_{cot.CotizacionID}";
+                            <tr>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-light p-0 text-primary" type="button" data-bs-toggle="collapse" data-bs-target="#@targetId" aria-expanded="false" title="Ver detalle e inventario">
+                                        <i class="bi bi-chevron-down fs-6"></i>
+                                    </button>
+                                </td>
+                                <td class="fw-bold text-primary">@cot.Codigo</td>
+                                <td><div class="fw-bold text-dark">@cot.ClienteNombre</div></td>
+                                <td><small class="text-dark">@(cot.FechaAprobacion?.ToString("dd/MM/yyyy HH:mm") ?? cot.FechaEmision.ToString("dd/MM/yyyy"))</small></td>
+                                <td class="text-center"><span class="badge bg-info text-dark">@cot.Detalles.Count ítems</span></td>
+                                <td class="text-end">
+                                    <form method="post" asp-page-handler="GenerarOrden" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="cotizacionId" value="@cot.CotizacionID" />
+                                        <button type="submit" class="btn btn-sm btn-success fw-semibold" onclick="return confirm('¿Desea ejecutar la explosión de materiales para la cotización @cot.Codigo?');">
+                                            <i class="bi bi-cpu me-1"></i> Generar Orden & Explosión
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+
+                            <!-- DESPLEGABLE CON EL DETALLE DE ÍTEMS Y STOCK -->
+                            <tr class="collapse bg-light" id="@targetId">
+                                <td colspan="6" class="p-3">
+                                    <div class="card border border-secondary border-opacity-25 shadow-sm">
+                                        <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+                                            <small class="fw-bold text-dark"><i class="bi bi-boxes me-1 text-primary"></i> Desglose de Productos y Disponibilidad de Stock</small>
+                                            <a asp-page="/Ventas/DetalleCotizacion" asp-route-id="@cot.CotizacionID" class="btn btn-link btn-sm p-0 fs-7 text-decoration-none" target="_blank">
+                                                Ver detalle completo <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                            </a>
+                                        </div>
+                                        <div class="card-body p-0">
+                                            <table class="table table-sm align-middle mb-0 bg-white">
+                                                <thead class="table-light fs-8 text-uppercase">
+                                                    <tr>
+                                                        <th class="ps-3">Descripción / Producto</th>
+                                                        <th class="text-center">U.M.</th>
+                                                        <th class="text-end">Cant. Solicitada</th>
+                                                        <th class="text-center">Estado Stock Almacén</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="fs-7">
+                                                    @foreach (var det in cot.Detalles)
+                                                    {
+                                                        // Si cuentas con la columna de stock en tu entidad de productos:
+                                                        // decimal stockActual = det.Producto?.StockActual ?? 0;
+                                                        // bool hayStock = stockActual >= det.Cantidad;
+                                                        bool hayStock = true; // Variable referencial
+
+                                                        <tr>
+                                                            <td class="ps-3 fw-semibold text-dark">@det.DescripcionItem</td>
+                                                            <td class="text-center"><span class="badge bg-light text-dark border">@det.UnidadMedida</span></td>
+                                                            <td class="text-end fw-bold text-primary">@det.Cantidad.ToString("N2")</td>
+                                                            <td class="text-center">
+                                                                @if (hayStock)
+                                                                {
+                                                                    <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
+                                                                        <i class="bi bi-check-circle-fill me-1"></i> Con Stock
+                                                                    </span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <span class="badge bg-warning-subtle text-warning border border-warning px-2 py-1 text-dark">
+                                                                        <i class="bi bi-exclamation-triangle-fill me-1"></i> Requiere Producción
+                                                                    </span>
+                                                                }
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- SECCIÓN 2: ÓRDENES DE PRODUCCIÓN GENERADAS -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-dark text-white py-2">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-list-task me-2"></i>Órdenes de Producción en Planta</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small">
+                    <tr>
+                        <th>Orden #</th>
+                        <th>Cotización</th>
+                        <th>Fecha Emisión</th>
+                        <th class="text-end">Cant. Planificada</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-end">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.OrdenesGeneradas.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">No hay órdenes de producción registradas.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var ord in Model.OrdenesGeneradas)
+                        {
+                            <tr>
+                                <td class="fw-bold text-dark">OP-@ord.OrdenProduccionID.ToString("D5")</td>
+                                <td><span class="badge bg-light text-dark border">@(ord.Cotizacion?.Codigo ?? "N/A")</span></td>
+                                <td><small class="text-muted">@ord.FechaEmision.ToString("dd/MM/yyyy HH:mm")</small></td>
+                                <td class="text-end fw-bold text-primary">@ord.CantidadPlanificada.ToString("N2")</td>
+                                <td class="text-center">
+                                    <span class="badge bg-warning text-dark">@ord.Estado</span>
+                                </td>
+                                <td class="text-end">
+                                    <a asp-page="/Produccion/Ordenes/Detalle" asp-route-id="@ord.OrdenProduccionID" class="btn btn-sm btn-outline-primary p-1 px-2" title="Ver Consumos / Explosión">
+                                        <i class="bi bi-eye"></i> Ver Insumos
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

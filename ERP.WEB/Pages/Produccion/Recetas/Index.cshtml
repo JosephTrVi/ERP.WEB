@@ -1,57 +1,41 @@
 ﻿@page
 @model ERP.WEB.Pages.Produccion.Recetas.IndexModel
 @{
-    ViewData["Title"] = "Recetas de Producción";
+    ViewData["Title"] = "Catálogo de Recetas";
 }
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-        <h4 class="fw-bold text-dark mb-0"><i class="bi bi-diagram-3-fill me-2 text-primary"></i>Recetas y Fórmulas (BOM)</h4>
-        <small class="text-muted">Lista de Fórmulas de Fabricación y Componentes por Producto Terminado</small>
+        <h4 class="fw-bold text-dark mb-0"><i class="bi bi-journal-text me-2 text-primary"></i>Catálogo de Recetas</h4>
+        <small class="text-muted">Consulta de fórmulas de producción y componentes por SKU</small>
     </div>
-    <a asp-page="./Crear" class="btn btn-primary fw-semibold shadow-sm">
-        <i class="bi bi-plus-circle me-1"></i> Nueva Receta
+    <a asp-page="/Produccion/Recetas/Crear" class="btn btn-primary btn-sm fw-semibold">
+        <i class="bi bi-plus-lg me-1"></i> Nueva Receta
     </a>
 </div>
 
-@if (!string.IsNullOrEmpty(Model.MensajeExito))
-{
-    <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
-        <i class="bi bi-check-circle-fill me-2"></i>@Model.MensajeExito
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-
-@if (!string.IsNullOrEmpty(Model.MensajeError))
-{
-    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>@Model.MensajeError
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-
 <!-- BARRA DE FILTROS -->
 <div class="card border-0 shadow-sm mb-4">
-    <div class="card-body bg-light rounded-3 p-3">
+    <div class="card-body p-3">
         <form method="get" class="row g-2 align-items-end">
             <div class="col-md-3">
-                <label class="form-label fw-semibold small text-muted mb-1"><i class="bi bi-folder me-1"></i>Categoría Receta</label>
-                <select id="ddlCategoria" asp-for="CategoriaID" asp-items="Model.SelectCategorias" class="form-select form-select-sm">
+                <label class="form-label small fw-semibold text-muted mb-1">Buscar por Código / SKU / Nombre</label>
+                <input type="text" class="form-control form-control-sm" asp-for="Buscar" placeholder="Ej: COT-05, Hamburguesa..." />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold text-muted mb-1">Categoría</label>
+                <select class="form-select form-select-sm" asp-for="CategoriaID" asp-items="Model.SelectCategorias" onchange="cargarSubcategorias(this.value)">
                     <option value="">-- Todas las Categorías --</option>
                 </select>
             </div>
             <div class="col-md-3">
-                <label class="form-label fw-semibold small text-muted mb-1"><i class="bi bi-folder2-open me-1"></i>Subcategoría Receta</label>
-                <select id="ddlSubcategoria" asp-for="SubcategoriaID" asp-items="Model.SelectSubcategorias" class="form-select form-select-sm">
-                    <option value="">-- Todas las Subcategorías --</option>
+                <label class="form-label small fw-semibold text-muted mb-1">SubCategoría</label>
+                <select class="form-select form-select-sm" asp-for="SubcategoriaID" asp-items="Model.SelectSubcategorias" id="ddlSubcategoria">
+                    <option value="">-- Todas las SubCategorías --</option>
                 </select>
             </div>
-            <div class="col-md-4">
-                <label class="form-label fw-semibold small text-muted mb-1"><i class="bi bi-search me-1"></i>Buscar Receta o Producto</label>
-                <input type="text" asp-for="Buscar" class="form-control form-control-sm" placeholder="Buscar por código SKU, producto o receta..." />
-            </div>
-            <div class="col-md-2 d-flex gap-1">
-                <button type="submit" class="btn btn-primary btn-sm fw-semibold w-100">
+            <div class="col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm fw-semibold flex-grow-1">
                     <i class="bi bi-funnel me-1"></i> Filtrar
                 </button>
                 <a asp-page="/Produccion/Recetas/Index" class="btn btn-outline-secondary btn-sm" title="Limpiar Filtros">
@@ -64,68 +48,59 @@
 
 <!-- TABLA DE RECETAS -->
 <div class="card border-0 shadow-sm">
+    <div class="card-header bg-dark text-white py-2">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-list-check me-2"></i>Recetas de Producción</h6>
+    </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-                <thead class="table-dark">
+                <thead class="table-light small">
                     <tr>
-                        <th style="width: 110px;">SKU PT</th>
-                        <th>Producto Terminado (PT)</th>
-                        <th>Nombre de la Receta</th>
-                        <th class="text-center">Categoría / Subcat.</th>
-                        <th class="text-center">Componentes</th>
-                        <th class="text-end">Costo Est. (S/)</th>
+                        <th>SKU PT</th>
+                        <th>Producto a Fabricar</th>
+                        <th>Categoría / SubCat</th>
+                        <th>Nombre Receta</th>
+                        <th class="text-center">Ítems</th>
+                        <th class="text-end">Costo Est. Total</th>
                         <th class="text-center">Estado</th>
-                        <th class="text-end" style="width: 130px;">Acciones</th>
+                        <th class="text-center" style="width: 120px;">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     @if (!Model.ListaRecetas.Any())
                     {
                         <tr>
-                            <td colspan="8" class="text-center py-5 text-muted">
-                                <i class="bi bi-funnel fs-2 d-block mb-2 text-secondary"></i>
-                                <span>Utilice los filtros superiores (Categoría, Subcategoría o Búsqueda) para consultar las recetas registradas.</span>
+                            <td colspan="8" class="text-center py-4 text-muted">
+                                <i class="bi bi-search fs-3 d-block mb-2"></i>
+                                Seleccione un filtro o presione <strong>Filtrar</strong> para buscar recetas.
                             </td>
                         </tr>
                     }
                     else
                     {
-                        @foreach (var item in Model.ListaRecetas)
+                        foreach (var item in Model.ListaRecetas)
                         {
                             <tr>
-                                <td><span class="badge bg-secondary font-monospace">@item.SKUPT</span></td>
+                                <td class="fw-bold text-primary">@item.SKUPT</td>
                                 <td class="fw-bold text-dark">@item.NombrePT</td>
-                                <td class="text-primary fw-semibold">@item.NombreReceta</td>
-                                <td class="text-center">
-                                    <small class="d-block fw-semibold text-secondary">@item.CategoriaPT</small>
-                                    <small class="text-muted">@item.SubCategoriaPT</small>
-                                </td>
-                                <td class="text-center">
-                                    <span class="badge bg-info text-dark font-monospace"><i class="bi bi-cpu me-1"></i>@item.TotalInsumos Insumos</span>
-                                </td>
+                                <td><small class="text-muted">@item.CategoriaPT / @item.SubCategoriaPT</small></td>
+                                <td><span class="badge bg-light text-dark border">@item.NombreReceta</span></td>
+                                <td class="text-center"><span class="badge bg-secondary">@item.TotalInsumos</span></td>
                                 <td class="text-end fw-bold text-success">S/ @item.CostoEstimadoTotal.ToString("N2")</td>
                                 <td class="text-center">
                                     @if (item.Estado)
                                     {
-                                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Activo</span>
+                                        <span class="badge bg-success">Activa</span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Inactivo</span>
+                                        <span class="badge bg-danger">Inactiva</span>
                                     }
                                 </td>
-                                <td class="text-end">
-                                    <button type="button" class="btn btn-sm btn-outline-info me-1" title="Ver Detalle" onclick="verDetalleReceta(@item.RecetaID)">
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-info" onclick="verDetalleReceta(@item.RecetaID)" title="Ver Detalle / Componentes">
                                         <i class="bi bi-eye"></i>
                                     </button>
-                                    <form method="post" asp-page-handler="CambiarEstado" asp-route-recetaId="@item.RecetaID" class="d-inline">
-                                        <button type="submit" class="btn btn-sm @(item.Estado ? "btn-outline-danger" : "btn-outline-success")"
-                                                title="@(item.Estado ? "Desactivar Receta" : "Activar Receta")"
-                                                onclick="return confirm('¿Está seguro de cambiar el estado de esta receta?');">
-                                            <i class="bi @(item.Estado ? "bi-slash-circle" : "bi-check-lg")"></i>
-                                        </button>
-                                    </form>
                                 </td>
                             </tr>
                         }
@@ -136,55 +111,46 @@
     </div>
 </div>
 
-<!-- MODAL PARA CONSULTAR DETALLE DE LA RECETA -->
+<!-- MODAL PARA MOSTRAR COMPONENTES / INSUMOS DESGLOSADOS POR SKU -->
 <div class="modal fade" id="modalDetalleReceta" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-dark text-white py-2">
-                <h6 class="modal-title fw-bold" id="modalTituloReceta">
-                    <i class="bi bi-diagram-3 me-2"></i> Detalle de Fórmula / BOM
-                </h6>
+                <h6 class="modal-title fw-bold" id="lblModalTitulo"><i class="bi bi-journal-text me-2"></i>Detalle de Receta</h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-3">
-                <div class="alert alert-light border mb-3 p-2 rounded">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <small class="text-muted d-block">SKU Producto Terminado</small>
-                            <span class="badge bg-secondary font-monospace" id="modalSkuPT">-</span>
-                        </div>
-                        <div class="col-md-8">
-                            <small class="text-muted d-block">Producto Terminado</small>
-                            <span class="fw-bold text-dark" id="modalNombrePT">-</span>
-                        </div>
-                    </div>
+                <div id="loadingModal" class="text-center py-4">
+                    <span class="spinner-border spinner-border-sm me-1"></span> Cargando componentes de la fórmula...
                 </div>
 
-                <h6 class="fw-bold small text-muted mb-2">Componentes e Insumos de Producción:</h6>
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover align-middle mb-0">
-                        <thead class="table-secondary">
-                            <tr>
-                                <th>SKU Insumo</th>
-                                <th>Categoría / Subcat.</th>
-                                <th>Insumo</th>
-                                <th class="text-center">Cant. Requerida</th>
-                                <th class="text-end">Costo Est. (S/)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbodyModalDetalle">
-                            <!-- Filas insertadas dinámicamente -->
-                        </tbody>
-                        <tfoot>
-                            <tr class="table-light fw-bold">
-                                <td colspan="4" class="text-end">Total Estimado en Insumos:</td>
-                                <td class="text-end text-success" id="modalTotalCosto">S/ 0.00</td>
-                            </tr>
-                        </tfoot>
-                    </table>
+                <div id="contenidoModal" class="d-none">
+                    <div class="bg-light p-2 rounded mb-3 border">
+                        <div class="row">
+                            <div class="col-md-4"><strong>SKU Producto:</strong> <span id="modalSkuPT" class="text-primary fw-bold"></span></div>
+                            <div class="col-md-8"><strong>Producto:</strong> <span id="modalNombrePT" class="fw-bold"></span></div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive border rounded">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light small">
+                                <tr>
+                                    <th>SKU Insumo</th>
+                                    <th>Insumo / Componente</th>
+                                    <th>Categoría / SubCat</th>
+                                    <th class="text-end">Cant. Requerida</th>
+                                    <th class="text-center">U.M.</th>
+                                    <th class="text-end">Costo Unit.</th>
+                                    <th class="text-end">SubTotal</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbodyDetalleInsumos"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer bg-light py-2">
+            <div class="modal-footer py-2">
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
@@ -193,28 +159,67 @@
 
 @section Scripts {
     <script>
-        document.getElementById('ddlCategoria').addEventListener('change', async function () {
-            const categoriaId = this.value;
-            const subcatSelect = document.getElementById('ddlSubcategoria');
+        async function cargarSubcategorias(categoriaId) {
+            const ddlSubcat = document.getElementById('ddlSubcategoria');
+            ddlSubcat.innerHTML = '<option value="">-- Todas las SubCategorías --</option>';
 
-            // Resetear desplegable de subcategorías
-            subcatSelect.innerHTML = '<option value="">-- Todas las Subcategorías --</option>';
+            if (!categoriaId) return;
 
             try {
-                // Realizar la petición AJAX al handler OnGetSubcategoriasPorCategoria
-                const response = await fetch(`?handler=SubcategoriasPorCategoria&categoriaId=${categoriaId || 0}`);
-                if (response.ok) {
-                    const data = await response.json();
+                const res = await fetch(`?handler=SubcategoriasPorCategoria&categoriaId=${categoriaId}`);
+                if (res.ok) {
+                    const data = await res.json();
                     data.forEach(item => {
-                        const option = document.createElement('option');
-                        option.value = item.value;
-                        option.textContent = item.text;
-                        subcatSelect.appendChild(option);
+                        const opt = document.createElement('option');
+                        opt.value = item.value;
+                        opt.text = item.text;
+                        ddlSubcat.appendChild(opt);
                     });
                 }
-            } catch (error) {
-                console.error('Error al cargar las subcategorías:', error);
+            } catch (err) {
+                console.error("Error al cargar subcategorías:", err);
             }
-        });
+        }
+
+        async function verDetalleReceta(recetaId) {
+            const modal = new bootstrap.Modal(document.getElementById('modalDetalleReceta'));
+            document.getElementById('loadingModal').classList.remove('d-none');
+            document.getElementById('contenidoModal').classList.add('d-none');
+            modal.show();
+
+            try {
+                const res = await fetch(`?handler=ObtenerDetalle&recetaId=${recetaId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success) {
+                        document.getElementById('modalSkuPT').innerText = data.skuPT || 'S/SKU';
+                        document.getElementById('modalNombrePT').innerText = data.nombrePT || '-';
+                        document.getElementById('lblModalTitulo').innerHTML = `<i class="bi bi-journal-text me-2"></i>Fórmula: ${data.nombreReceta}`;
+
+                        const tbody = document.getElementById('tbodyDetalleInsumos');
+                        let html = '';
+
+                        data.detalles.forEach(d => {
+                            html += `
+                                <tr>
+                                    <td class="fw-bold text-primary">${d.skuInsumo || 'S/SKU'}</td>
+                                    <td class="fw-semibold text-dark">${d.nombreInsumo || 'Insumo sin nombre'}</td>
+                                    <td><small class="text-muted">${d.categoria} / ${d.subCategoria}</small></td>
+                                    <td class="text-end fw-bold text-success">${d.cantidad.toFixed(4)}</td>
+                                    <td class="text-center"><span class="badge bg-secondary">${d.unidadMedida}</span></td>
+                                    <td class="text-end">S/ ${d.costoUnitario.toFixed(2)}</td>
+                                    <td class="text-end fw-bold">S/ ${d.subtotal.toFixed(2)}</td>
+                                </tr>`;
+                        });
+
+                        tbody.innerHTML = html;
+                        document.getElementById('loadingModal').classList.add('d-none');
+                        document.getElementById('contenidoModal').classList.remove('d-none');
+                    }
+                }
+            } catch (err) {
+                console.error("Error al consultar detalle:", err);
+            }
+        }
     </script>
 }

@@ -53,6 +53,8 @@ namespace ERP.WEB.Data
         public DbSet<Receta> Recetas { get; set; }
         public DbSet<RecetaDetalle> RecetaDetalles { get; set; }
 
+        public DbSet<OrdenProduccion> OrdenesProduccion { get; set; } = null!;
+        public DbSet<OrdenProduccionConsumo> OrdenesProduccionConsumos { get; set; } = null!;
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -254,12 +256,21 @@ namespace ERP.WEB.Data
             });
 
             //Produccion
-            // Mapeo explícito de tablas y esquemas (opcional si ya usaste [Table] en las entidades)
-            modelBuilder.Entity<Receta>()
-                .ToTable("Recetas", schema: "Produccion");
+            // Mapeo explícito al esquema Produccion
+            modelBuilder.Entity<Receta>().ToTable("Recetas", "Produccion");
+            modelBuilder.Entity<RecetaDetalle>().ToTable("RecetaDetalles", "Produccion");
 
+            // Relación Receta -> Producto Terminado (Padre)
+            modelBuilder.Entity<Receta>()
+                .HasOne(r => r.ProductoTerminado)
+                .WithMany()
+                .HasForeignKey(r => r.ProductoTerminadoID);
+
+            // Relación RecetaDetalle -> Producto/Insumo
             modelBuilder.Entity<RecetaDetalle>()
-                .ToTable("RecetaDetalles", schema: "Produccion");
+                .HasOne(d => d.Insumo)
+                .WithMany()
+                .HasForeignKey(d => d.InsumoID);
 
             // Configuración de precisión decimal para la cantidad requerida
             modelBuilder.Entity<RecetaDetalle>()

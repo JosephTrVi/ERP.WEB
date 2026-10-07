@@ -9,7 +9,7 @@
     bool esLogistica = pagePath.StartsWith("/compras");
     bool esVentas = pagePath.StartsWith("/ventas");
     bool esRRHH = pagePath.StartsWith("/rrhh");
-    bool esContabilidad = pagePath.StartsWith("/contabilidad");
+    bool esContabilidad = pagePath.StartsWith("/contabilidad") || pagePath.StartsWith("/maestros");
     bool esFinanzas = pagePath.StartsWith("/finanzas");
     bool esSistemas = pagePath.StartsWith("/seguridad") || pagePath.StartsWith("/sistemas");
 }
@@ -48,6 +48,10 @@
             transition: all 0.3s;
             min-height: 100vh;
         }
+
+            #sidebar.collapsed {
+                margin-left: -260px;
+            }
 
         #content {
             width: 100%;
@@ -173,7 +177,7 @@
                                 <a asp-page="/Almacen/Articulos" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/almacen/articulos" ? "active-link" : "")">
                                     <i class="bi bi-tags me-2"></i> Catálogo de Artículos
                                 </a>
-                                <a asp-page="/Almacen/ArticuloAtributos" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/almacen/ArticuloAtributos" ? "active-link" : "")">
+                                <a asp-page="/Almacen/ArticuloAtributos" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/almacen/articuloatributos" ? "active-link" : "")">
                                     <i class="bi bi-card-checklist me-1 text-primary"></i> Atributos de Artículos
                                 </a>
                                 <a asp-page="/Almacen/BandejaRecepcion" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/almacen/bandejarecepcion" ? "active-link" : "")">
@@ -186,7 +190,7 @@
                         </div>
                     </div>
 
-                    <!-- 3. MÓDULO DE PRODUCCIÓN -->
+                    <!-- 3. MÓDULO DE PRODUCCIÓN (HABILITADO Y CORREGIDO) -->
                     <div class="accordion-item bg-transparent border-0">
                         <h2 class="accordion-header">
                             <button class="accordion-button @(esProduccion ? "" : "collapsed") bg-transparent text-white shadow-none px-3 py-2 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#menuProduccion" aria-expanded="@(esProduccion ? "true" : "false")">
@@ -196,14 +200,14 @@
                         </h2>
                         <div id="menuProduccion" class="accordion-collapse collapse @(esProduccion ? "show" : "")" data-bs-parent="#accordionSidebar">
                             <div class="accordion-body p-0 ps-3 my-1">
-                                <a asp-page="/Produccion/Recetas/Index" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/produccion/recetas/index" || pagePath == "/produccion/recetas" ? "active-link" : "")">
+                                                                <a asp-page="/Produccion/Recetas/Index" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/produccion/recetas/index" || pagePath == "/produccion/recetas" ? "active-link" : "")">
                                     <i class="bi bi-diagram-3 me-2"></i> Recetas y Fórmulas (BOM)
                                 </a>
                                 <a asp-page="/Produccion/Recetas/Crear" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/produccion/recetas/crear" ? "active-link" : "")">
                                     <i class="bi bi-plus-circle me-2 text-success"></i> Nueva Receta
                                 </a>
-                                <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
-                                    <i class="bi bi-tools me-2"></i> Órdenes de Producción
+                                <a asp-page="/Produccion/Ordenes/Index" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/produccion/ordenes/index" || pagePath == "/produccion/ordenes" ? "active-link" : "")">
+                                    <i class="bi bi-cpu me-2 text-warning"></i> Órdenes de Producción & MRP
                                 </a>
                             </div>
                         </div>
@@ -242,14 +246,14 @@
                         </h2>
                         <div id="menuVentas" class="accordion-collapse collapse @(esVentas ? "show" : "")" data-bs-parent="#accordionSidebar">
                             <div class="accordion-body p-0 ps-3 my-1">
+                                <a asp-page="/Ventas/AprobacionCotizaciones" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/ventas/aprobacioncotizaciones" ? "active-link" : "")">
+                                    <i class="bi bi-shield-check me-2 text-success"></i> Aprobación de Cotizaciones
+                                </a>
                                 <a asp-page="/Ventas/BandejaCotizaciones" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/ventas/bandejacotizaciones" ? "active-link" : "")">
                                     <i class="bi bi-file-earmark-text me-2"></i> Mis Cotizaciones
                                 </a>
                                 <a asp-page="/Ventas/NuevaCotizacion" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/ventas/nuevacotizacion" ? "active-link" : "")">
                                     <i class="bi bi-plus-circle me-2"></i> Registrar Cotización
-                                </a>
-                                <a asp-page="/Ventas/AprobacionCotizaciones" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/ventas/aprobacioncotizaciones" ? "active-link" : "")">
-                                    <i class="bi bi-shield-check me-2"></i> Aprobación de Gerencia
                                 </a>
                                 <a asp-page="/Ventas/ListasPrecios" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/ventas/listasprecios" ? "active-link" : "")">
                                     <i class="bi bi-tags me-2"></i> Listas de Precios Mensuales
@@ -288,7 +292,7 @@
                         </h2>
                         <div id="menuContabilidad" class="accordion-collapse collapse @(esContabilidad ? "show" : "")" data-bs-parent="#accordionSidebar">
                             <div class="accordion-body p-0 ps-3 my-1">
-                                <a asp-page="/Maestros/TipoCambio" class="nav-link py-1 fs-7 d-flex align-items-center @(pagePath == "/maestros/tipocambio" ? "active-link" : "")">
+                                <a asp-page="/Maestros/TipoCambio" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/maestros/tipocambio" ? "active-link" : "")">
                                     <i class="bi bi-currency-dollar me-2 text-success"></i> Tipo de Cambio SUNAT
                                 </a>
                                 <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
@@ -337,11 +341,11 @@
                                 <a asp-page="/Seguridad/Permisos" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/seguridad/permisos" ? "active-link" : "")">
                                     <i class="bi bi-key me-2"></i> Permisos
                                 </a>
+                                <a asp-page="/Sistemas/ImportarDatos" class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center @(pagePath == "/sistemas/importardatos" ? "active-link" : "")">
+                                    <i class="bi bi-file-earmark-excel me-2 text-success"></i> Importar Datos
+                                </a>
                                 <a class="nav-link text-white-50 py-1 fs-7 d-flex align-items-center disabled" href="#">
                                     <i class="bi bi-sliders me-2"></i> Configuración ERP
-                                </a>
-                                <a class="nav-link text-dark fw-semibold" asp-page="/Sistemas/ImportarDatos">
-                                    <i class="bi bi-file-earmark-excel me-1 text-success"></i> Importar Datos
                                 </a>
                             </div>
                         </div>
@@ -356,6 +360,9 @@
             <!-- NAVBAR SUPERIOR -->
             <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom px-4 py-2 shadow-sm">
                 <div class="container-fluid p-0">
+                    <button type="button" id="sidebarCollapse" class="btn btn-light btn-sm border me-3" title="Ocultar/Mostrar Menú">
+                        <i class="bi bi-list fs-5"></i>
+                    </button>
                     <span class="navbar-text fw-semibold text-dark">
                         <i class="bi bi-building me-1 text-primary"></i> Planta Principal - Perú
                     </span>
@@ -385,6 +392,12 @@
     <!-- SCRIPTS CORE -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script>
+        // Script para colapsar y expandir el menú lateral
+        document.getElementById('sidebarCollapse')?.addEventListener('click', function () {
+            document.getElementById('sidebar').classList.toggle('collapsed');
+        });
+    </script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

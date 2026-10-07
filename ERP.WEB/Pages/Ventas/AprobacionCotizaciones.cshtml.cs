@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace ERP.WEB.Pages.Ventas
 {
     [Authorize]
+    [ValidateAntiForgeryToken]
     public class AprobacionCotizacionesModel : PageModel
     {
         private readonly ApplicationDbContext _context;
@@ -110,6 +111,43 @@ namespace ERP.WEB.Pages.Ventas
                 new { Id = 12, Nombre = "Diciembre" }
             };
             SelectMeses = new SelectList(listaMeses, "Id", "Nombre", Mes);
+        }
+
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> OnPostAprobarCotizacionAsync(int cotizacionId)
+        {
+            try
+            {
+                var cotizacion = await _context.CotizacionesCabecera
+                    .FirstOrDefaultAsync(c => c.CotizacionID == cotizacionId);
+
+                if (cotizacion == null)
+                {
+                    MensajeError = "La cotización no fue encontrada.";
+                    return RedirectToPage();
+                }
+
+                if (cotizacion.Estado == "Aprobada")
+                {
+                    MensajeError = "La cotización ya se encuentra aprobada.";
+                    return RedirectToPage();
+                }
+
+                // Únicamente cambiar el estado comercial
+                cotizacion.Estado = "Aprobada";
+                cotizacion.FechaAprobacion = DateTime.Now;
+
+                _context.CotizacionesCabecera.Update(cotizacion);
+                await _context.SaveChangesAsync();
+
+                MensajeExito = $"Cotización {cotizacion.Codigo} APROBADA exitosamente. Disponible para Producción.";
+                return RedirectToPage();
+            }
+            catch (Exception ex)
+            {
+                MensajeError = $"Error al aprobar la cotización: {ex.Message}";
+                return RedirectToPage();
+            }
         }
     }
 }

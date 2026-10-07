@@ -8,6 +8,7 @@ namespace ERP.WEB.Models.Ventas
     public class Cliente
     {
         [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int ClienteID { get; set; }
 
         [Required]

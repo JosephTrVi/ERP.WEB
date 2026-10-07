@@ -14,8 +14,20 @@
     </a>
 </div>
 
+<div asp-validation-summary="All" class="text-danger small mb-2"></div>
+
+@if (!string.IsNullOrEmpty(Model.MensajeError))
+{
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i> @Model.MensajeError
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
 <form method="post" asp-page-handler="GuardarCotizacion" id="formCotiz">
-    <input type="hidden" asp-for="InputCotiz.ClienteID" id="txtClienteID" />
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="InputCotiz.ClienteID" id="txtClienteID" value="0" />
+    <input type="hidden" asp-for="InputCotiz.ClienteNombre" id="txtClienteNombre" />
     <input type="hidden" asp-for="ItemsJson" id="txtItemsJson" />
 
     <!-- DATOS CLIENTE -->
@@ -30,18 +42,18 @@
                     <input type="text" class="form-control bg-light fw-bold text-primary" asp-for="InputCotiz.Codigo" readonly />
                 </div>
 
-                <!-- BUSCADOR DINÁMICO DE CLIENTES -->
-                <div class="col-md-4 position-relative">
+                <!-- CAMPO SELECCIÓN DE CLIENTE -->
+                <div class="col-md-4">
                     <label class="form-label fw-semibold">Cliente / Razón Social <span class="text-danger">*</span></label>
                     <div class="input-group">
-                        <span class="input-group-text bg-white"><i class="bi bi-search text-primary"></i></span>
-                        <input type="text" class="form-control fw-bold" asp-for="InputCotiz.ClienteNombre" id="txtClienteNombre" placeholder="Buscar RUC, DNI o Nombre..." autocomplete="off" oninput="buscarCliente()" required />
-                        <button type="button" class="btn btn-outline-secondary d-none" id="btnLimpiarCliente" onclick="limpiarCliente()">
-                            <i class="bi bi-x-circle"></i>
+                        <input type="text" class="form-control fw-bold bg-light" id="txtClienteNombreMostrar" placeholder="-- Seleccionar Cliente --" readonly required />
+                        <button type="button" class="btn btn-primary fw-semibold" onclick="abrirModalSeleccionarCliente()">
+                            <i class="bi bi-search me-1"></i> Buscar
+                        </button>
+                        <button type="button" class="btn btn-outline-danger d-none" id="btnLimpiarCliente" onclick="limpiarCliente()" title="Limpiar Cliente">
+                            <i class="bi bi-x-lg"></i>
                         </button>
                     </div>
-                    <!-- Lista de resultados flotante -->
-                    <div id="listResCliente" class="list-group position-absolute w-100 shadow-lg d-none" style="z-index: 1050; max-height: 220px; overflow-y: auto;"></div>
                 </div>
 
                 <div class="col-md-6">
@@ -130,7 +142,97 @@
     </div>
 </form>
 
-<!-- MODAL 1: BUSCAR ARTÍCULOS EN CATÁLOGO (PRODUCTOS TERMINADOS) -->
+<!-- MODAL 1: SELECCIONAR CLIENTE -->
+<div class="modal fade" id="modalSeleccionarCliente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-dark text-white py-2">
+                <h6 class="modal-title fw-bold">
+                    <i class="bi bi-person-bounding-box me-2"></i>Seleccionar Cliente
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div class="input-group mb-3">
+                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="txtBuscarClienteModal" class="form-control" placeholder="Buscar por RUC, DNI o Razón Social..." oninput="buscarClienteModal()" />
+                </div>
+
+                <div class="table-responsive border rounded mb-3" style="min-height: 150px; max-height: 250px;">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>Documento</th>
+                                <th>Razón Social / Nombre</th>
+                                <th>Dirección</th>
+                                <th class="text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyClientesModal">
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">Ingrese al menos 2 caracteres para buscar.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- ALERTA CREAR CLIENTE EXPRESS -->
+                <div class="alert alert-info d-flex justify-content-between align-items-center mb-0 py-2 px-3 border-info">
+                    <div class="small fw-semibold text-dark">
+                        <i class="bi bi-info-circle-fill text-info me-2 fs-6"></i>
+                        ¿El cliente no existe en el catálogo?
+                    </div>
+                    <button type="button" class="btn btn-outline-dark btn-sm fw-semibold bg-white" onclick="abrirModalCrearClienteExpress()">
+                        <i class="bi bi-plus-circle me-1"></i> Crear Cliente Express
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 2: CREAR CLIENTE EXPRESS -->
+<div class="modal fade" id="modalCrearClienteExpress" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white py-2">
+                <h6 class="modal-title fw-bold">
+                    <i class="bi bi-plus-circle me-2"></i>Crear Cliente Express
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div id="alertErrorClienteExpress" class="alert alert-danger d-none py-2 small" role="alert"></div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small mb-1">RUC / DNI (Documento)</label>
+                    <input type="text" id="txtDocumentoExpress" class="form-control form-control-sm" placeholder="Ej: 20100047218" maxlength="15" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small mb-1">Razón Social / Nombre Completo <span class="text-danger">*</span></label>
+                    <input type="text" id="txtRazonSocialExpress" class="form-control form-control-sm" required placeholder="Ej: Empresa Comercial S.A.C." />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold small mb-1">Dirección Fiscal</label>
+                    <input type="text" id="txtDireccionExpress" class="form-control form-control-sm" placeholder="Ej: Av. Principal 123, Lima" />
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2 d-flex justify-content-between">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success btn-sm fw-semibold" onclick="guardarClienteExpress()">
+                    <i class="bi bi-check-circle me-1"></i> Guardar y Seleccionar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 3: BUSCAR ARTÍCULOS EN CATÁLOGO (PRODUCTOS TERMINADOS) -->
 <div class="modal fade" id="modalBuscadorArticulosPT" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
@@ -178,7 +280,7 @@
                             </tr>
                         </thead>
                         <tbody id="tbodyResultadosPT">
-                            <tr><td colspan="6" class="text-center py-4 text-muted">Seleccione un filtro o ingrese un código y haga clic en <strong>Filtrar</strong>.</td></tr>
+                            <tr><td colspan="6" class="text-center py-4 text-muted">Seleccione una SubCategoría o ingrese un código/nombre y haga clic en <strong>Filtrar</strong>.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -201,7 +303,7 @@
     </div>
 </div>
 
-<!-- MODAL 2: CREAR ARTÍCULO ON-THE-FLY (PRODUCTO TERMINADO) -->
+<!-- MODAL 4: CREAR ARTÍCULO ON-THE-FLY (PRODUCTO TERMINADO) -->
 <div class="modal fade" id="modalCrearOnTheFlyPT" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
@@ -224,11 +326,11 @@
 
                     <div class="col-md-4">
                         <label class="form-label fw-semibold small">SKU Autogenerado</label>
-                        <input type="text" class="form-control form-control-sm bg-light fw-bold text-primary" id="txtSkuOnTheFly" readonly placeholder="PT-XXX-0001" />
+                        <input type="text" class="form-control form-control-sm bg-light fw-bold text-primary" id="txtSkuOnTheFly" readonly placeholder="05010001" />
                     </div>
                     <div class="col-md-8">
                         <label class="form-label fw-semibold small">Nombre del Artículo <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control form-control-sm" id="txtNombreOnTheFly" required placeholder="Ej: Gabinete Metálico 42U" />
+                        <input type="text" class="form-control form-control-sm" id="txtNombreOnTheFly" required placeholder="Ej: Hamburguesa Especial" />
                     </div>
 
                     <div class="col-md-6">
@@ -259,78 +361,196 @@
 
 @section Scripts {
     <script>
-        let timerCliente;
+        let timerClienteModal;
 
-        // LÓGICA BÚSQUEDA DE CLIENTE
-        function buscarCliente() {
-            clearTimeout(timerCliente);
-            const q = document.getElementById('txtClienteNombre').value.trim();
-            const listRes = document.getElementById('listResCliente');
+        // LÓGICA DE SELECCIÓN Y BÚSQUEDA DE CLIENTE POR MODAL
+        function abrirModalSeleccionarCliente() {
+            document.getElementById('txtBuscarClienteModal').value = '';
+            document.getElementById('tbodyClientesModal').innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">Ingrese al menos 2 caracteres para buscar.</td></tr>';
+
+            const modal = new bootstrap.Modal(document.getElementById('modalSeleccionarCliente'));
+            modal.show();
+        }
+
+        function buscarClienteModal() {
+            clearTimeout(timerClienteModal);
+            const q = document.getElementById('txtBuscarClienteModal').value.trim();
+            const tbody = document.getElementById('tbodyClientesModal');
 
             if (q.length < 2) {
-                listRes.classList.add('d-none');
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">Ingrese al menos 2 caracteres para buscar.</td></tr>';
                 return;
             }
 
-            timerCliente = setTimeout(async () => {
+            timerClienteModal = setTimeout(async () => {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-3"><span class="spinner-border spinner-border-sm me-1"></span> Buscando clientes...</td></tr>';
+
                 try {
                     const resp = await fetch(`?handler=BuscarClientes&q=${encodeURIComponent(q)}`);
-                    if (!resp.ok) return;
+                    if (resp.ok) {
+                        const lista = await resp.json();
+                        if (lista.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">No se encontraron clientes coincidentes.</td></tr>';
+                            return;
+                        }
 
-                    const data = await resp.json();
-                    listRes.innerHTML = '';
+                        let html = '';
+                        lista.forEach(cli => {
+                            const idNum = parseInt(cli.id || cli.clienteID, 10) || 0;
+                            const nom = (cli.nombre || '').replace(/'/g, "\\'");
+                            const doc = (cli.documento || '').replace(/'/g, "\\'");
+                            const dir = (cli.direccion || '').replace(/'/g, "\\'");
 
-                    if (data.length === 0) {
-                        listRes.innerHTML = '<div class="list-group-item text-muted small">No se encontraron clientes coincidente.</div>';
-                    } else {
-                        data.forEach(cli => {
-                            const a = document.createElement('a');
-                            a.href = '#';
-                            a.className = 'list-group-item list-group-item-action small fw-semibold';
-                            a.innerText = cli.displayText || `[${cli.documento}] ${cli.nombre}`;
-                            a.onclick = (e) => {
-                                e.preventDefault();
-                                seleccionarCliente(cli);
-                            };
-                            listRes.appendChild(a);
+                            html += `
+                                <tr>
+                                    <td class="fw-bold text-primary">${cli.documento || '-'}</td>
+                                    <td class="fw-bold text-dark">${cli.nombre}</td>
+                                    <td><small class="text-muted">${cli.direccion || '-'}</small></td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-sm btn-success fw-semibold" onclick="asignarClienteDirecto(${idNum}, '${nom}', '${doc}', '${dir}')">
+                                            <i class="bi bi-check-lg me-1"></i> Seleccionar
+                                        </button>
+                                    </td>
+                                </tr>`;
                         });
+                        tbody.innerHTML = html;
                     }
-                    listRes.classList.remove('d-none');
                 } catch (err) {
-                    console.error("Error de red al buscar cliente:", err);
+                    console.error("Error al buscar cliente:", err);
                 }
             }, 300);
         }
 
-        function seleccionarCliente(cli) {
-            document.getElementById('txtClienteID').value = cli.id;
-            document.getElementById('txtClienteNombre').value = cli.nombre;
-            if (cli.direccion) {
-                document.getElementById('txtClienteDireccion').value = cli.direccion;
+                function asignarClienteDirecto(id, nombre, documento, direccion) {
+            const idNumerico = parseInt(id, 10) || 0;
+
+            // 1. Obtener el input oculto del ID de cliente
+            const inputID = document.getElementById('txtClienteID');
+            if (inputID) {
+                inputID.value = idNumerico;
+                inputID.setAttribute('value', idNumerico); // Forzar la actualización del atributo en el DOM
             }
 
-            document.getElementById('btnLimpiarCliente').classList.remove('d-none');
-            document.getElementById('listResCliente').classList.add('d-none');
+            // 2. Asignar el nombre del cliente
+            const inputNombre = document.getElementById('txtClienteNombre');
+            if (inputNombre) {
+                inputNombre.value = nombre;
+                inputNombre.setAttribute('value', nombre);
+            }
+
+            // 3. Asignar el texto visible
+            const inputMostrar = document.getElementById('txtClienteNombreMostrar');
+            if (inputMostrar) {
+                inputMostrar.value = `[${documento || 'S/D'}] ${nombre}`;
+            }
+
+            // 4. Asignar la dirección de entrega
+            if (direccion) {
+                const inputDir = document.getElementById('txtClienteDireccion');
+                if (inputDir) inputDir.value = direccion;
+            }
+
+            // Mostrar el botón para limpiar el cliente seleccionado
+            const btnLimpiar = document.getElementById('btnLimpiarCliente');
+            if (btnLimpiar) btnLimpiar.classList.remove('d-none');
+
+            // Cerrar el modal
+            const modalEl = document.getElementById('modalSeleccionarCliente');
+            if (modalEl) {
+                const instance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                instance.hide();
+            }
         }
 
         function limpiarCliente() {
             document.getElementById('txtClienteID').value = '0';
             document.getElementById('txtClienteNombre').value = '';
+            document.getElementById('txtClienteNombreMostrar').value = '';
             document.getElementById('txtClienteDireccion').value = '';
             document.getElementById('btnLimpiarCliente').classList.add('d-none');
         }
 
-        document.addEventListener('click', function (e) {
-            if (!e.target.closest('#txtClienteNombre') && !e.target.closest('#listResCliente')) {
-                document.getElementById('listResCliente').classList.add('d-none');
-            }
-        });
+        // LÓGICA DE CLIENTE EXPRESS
+        function abrirModalCrearClienteExpress() {
+            document.getElementById('txtDocumentoExpress').value = '';
+            document.getElementById('txtRazonSocialExpress').value = '';
+            document.getElementById('txtDireccionExpress').value = '';
 
-        // BÚSQUEDA Y CREACIÓN DE PRODUCTOS TERMINADOS
+            const alertBox = document.getElementById('alertErrorClienteExpress');
+            alertBox.classList.add('d-none');
+
+            const subModal = new bootstrap.Modal(document.getElementById('modalCrearClienteExpress'));
+            subModal.show();
+        }
+
+        async function guardarClienteExpress() {
+            const doc = document.getElementById('txtDocumentoExpress').value.trim();
+            const razonSocial = document.getElementById('txtRazonSocialExpress').value.trim();
+            const direccion = document.getElementById('txtDireccionExpress').value.trim();
+            const alertBox = document.getElementById('alertErrorClienteExpress');
+
+            if (!razonSocial) {
+                alertBox.innerText = "La Razón Social o Nombre Completo es obligatorio.";
+                alertBox.classList.remove('d-none');
+                return;
+            }
+
+            const payload = {
+                Documento: doc,
+                RazonSocial: razonSocial,
+                Direccion: direccion,
+                TipoDocumento: doc.length === 11 ? "RUC" : (doc.length === 8 ? "DNI" : "OTROS")
+            };
+
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+            try {
+                const res = await fetch('?handler=CrearClienteExpress', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': token
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    const result = await res.json();
+                    if (result.success) {
+                        const modalExpress = bootstrap.Modal.getInstance(document.getElementById('modalCrearClienteExpress'));
+                        if (modalExpress) modalExpress.hide();
+
+                        const modalSelect = bootstrap.Modal.getInstance(document.getElementById('modalSeleccionarCliente'));
+                        if (modalSelect) modalSelect.hide();
+
+                        asignarClienteDirecto(
+                            result.clienteID,
+                            result.razonSocial,
+                            result.documento,
+                            result.direccion
+                        );
+                    } else {
+                        alertBox.innerText = result.message || "Error al registrar el cliente.";
+                        alertBox.classList.remove('d-none');
+                    }
+                }
+            } catch (err) {
+                console.error("Error:", err);
+                alertBox.innerText = "Error de conexión al guardar cliente.";
+                alertBox.classList.remove('d-none');
+            }
+        }
+
+        // BÚSQUEDA Y CREACIÓN DE PRODUCTOS TERMINADOS ON-THE-FLY
         function abrirBuscadorArticulosPT() {
+            document.getElementById('ddlFiltroSubCatPT').value = "0";
+            document.getElementById('txtFiltroQueryPT').value = "";
+
+            const tbody = document.getElementById('tbodyResultadosPT');
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">Seleccione una SubCategoría o ingrese un código/nombre y haga clic en <strong>Filtrar</strong>.</td></tr>';
+
             const modal = new bootstrap.Modal(document.getElementById('modalBuscadorArticulosPT'));
             modal.show();
-            buscarProductosTerminados();
         }
 
         async function buscarProductosTerminados() {
@@ -338,33 +558,43 @@
             const q = document.getElementById('txtFiltroQueryPT').value.trim();
             const tbody = document.getElementById('tbodyResultadosPT');
 
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-3"><span class="spinner-border spinner-border-sm me-1"></span> Buscando productos...</td></tr>';
+            if (parseInt(subCatId) <= 0 && q.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-warning fw-semibold"><i class="bi bi-exclamation-triangle me-1"></i> Debe seleccionar una SubCategoría o ingresar un texto para buscar.</td></tr>';
+                return;
+            }
 
-            const res = await fetch(`?handler=BuscarProductosTerminados&subCategoriaId=${subCatId}&query=${encodeURIComponent(q)}`);
-            if (res.ok) {
-                const lista = await res.json();
-                if (lista.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No se encontraron artículos que coincidan con la búsqueda.</td></tr>';
-                    return;
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-3"><span class="spinner-border spinner-border-sm me-1"></span> Buscando productos terminados...</td></tr>';
+
+            try {
+                const res = await fetch(`?handler=BuscarProductosTerminados&subCategoriaId=${subCatId}&query=${encodeURIComponent(q)}`);
+                if (res.ok) {
+                    const lista = await res.json();
+                    if (lista.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No se encontraron productos terminados que coincidan con los filtros seleccionados.</td></tr>';
+                        return;
+                    }
+
+                    let html = '';
+                    lista.forEach(p => {
+                        html += `
+                            <tr>
+                                <td class="fw-bold text-primary">${p.sku}</td>
+                                <td class="fw-bold text-dark">${p.nombre}</td>
+                                <td><small class="text-muted">${p.categoriaSubCat}</small></td>
+                                <td><span class="badge bg-secondary">${p.unidadMedida}</span></td>
+                                <td class="text-end fw-bold">${p.stockActual.toFixed(2)}</td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-success fw-semibold" onclick='seleccionarEInsertarItem(${JSON.stringify(p)})'>
+                                        <i class="bi bi-plus-lg me-1"></i> Seleccionar
+                                    </button>
+                                </td>
+                            </tr>`;
+                    });
+                    tbody.innerHTML = html;
                 }
-
-                let html = '';
-                lista.forEach(p => {
-                    html += `
-                        <tr>
-                            <td class="fw-bold text-primary">${p.sku}</td>
-                            <td class="fw-bold text-dark">${p.nombre}</td>
-                            <td><small class="text-muted">${p.categoriaSubCat}</small></td>
-                            <td><span class="badge bg-secondary">${p.unidadMedida}</span></td>
-                            <td class="text-end fw-bold">${p.stockActual.toFixed(2)}</td>
-                            <td class="text-center">
-                                <button type="button" class="btn btn-sm btn-success fw-semibold" onclick='seleccionarEInsertarItem(${JSON.stringify(p)})'>
-                                    <i class="bi bi-plus-lg me-1"></i> Seleccionar
-                                </button>
-                            </td>
-                        </tr>`;
-                });
-                tbody.innerHTML = html;
+            } catch (err) {
+                console.error("Error al consultar productos:", err);
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Ocurrió un error al cargar la lista de productos.</td></tr>';
             }
         }
 
@@ -413,8 +643,7 @@
                 SKU: sku,
                 Nombre: nombre,
                 UnidadMedida: um,
-                ControlaStock: controlaStock,
-                StockActual: 0
+                ControlaStock: controlaStock
             };
 
             const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;

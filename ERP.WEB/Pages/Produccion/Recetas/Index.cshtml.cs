@@ -42,7 +42,7 @@ namespace ERP.WEB.Pages.Produccion.Recetas
         {
             await CargarCombosFiltroAsync();
 
-            // Solo consulta si el usuario ha presionado el botón "Filtrar"
+            // Consultar únicamente si se enviaron parámetros de filtro
             bool esPeticionFiltrada = Request.Query.ContainsKey("Buscar") ||
                                      Request.Query.ContainsKey("CategoriaID") ||
                                      Request.Query.ContainsKey("SubcategoriaID");
@@ -89,8 +89,8 @@ namespace ERP.WEB.Pages.Produccion.Recetas
                     RecetaID = r.RecetaID,
                     NombreReceta = r.NombreReceta,
                     ProductoTerminadoID = r.ProductoTerminadoID,
-                    SKUPT = r.ProductoTerminado != null ? r.ProductoTerminado.SKU : "",
-                    NombrePT = r.ProductoTerminado != null ? r.ProductoTerminado.Nombre : "",
+                    SKUPT = r.ProductoTerminado != null ? r.ProductoTerminado.SKU : "S/SKU",
+                    NombrePT = r.ProductoTerminado != null ? r.ProductoTerminado.Nombre : "Producto No Encontrado",
                     CategoriaPT = r.ProductoTerminado != null && r.ProductoTerminado.Categoria != null ? r.ProductoTerminado.Categoria.Nombre : "Sin Cát.",
                     SubCategoriaPT = r.ProductoTerminado != null && r.ProductoTerminado.SubCategoria != null ? r.ProductoTerminado.SubCategoria.Nombre : "Sin SubCát.",
                     TotalInsumos = r.Detalles.Count,
@@ -168,6 +168,7 @@ namespace ERP.WEB.Pages.Produccion.Recetas
             return RedirectToPage(new { Buscar, CategoriaID, SubcategoriaID });
         }
 
+        // HANDLER AJAX: Devuelve el detalle completo de los componentes/insumos por SKU
         public async Task<IActionResult> OnGetObtenerDetalleAsync(int recetaId)
         {
             var receta = await _context.Recetas
@@ -194,12 +195,12 @@ namespace ERP.WEB.Pages.Produccion.Recetas
                 success = true,
                 recetaID = receta.RecetaID,
                 nombreReceta = receta.NombreReceta,
-                skuPT = receta.ProductoTerminado?.SKU,
-                nombrePT = receta.ProductoTerminado?.Nombre,
+                skuPT = receta.ProductoTerminado?.SKU ?? "S/SKU",
+                nombrePT = receta.ProductoTerminado?.Nombre ?? "Producto no encontrado",
                 detalles = receta.Detalles.Select(d => new
                 {
-                    skuInsumo = d.Insumo?.SKU,
-                    nombreInsumo = d.Insumo?.Nombre,
+                    skuInsumo = d.Insumo?.SKU ?? "S/SKU",
+                    nombreInsumo = d.Insumo?.Nombre ?? "Insumo Desconocido",
                     categoria = d.Insumo?.Categoria?.Nombre ?? "Sin Cát.",
                     subCategoria = d.Insumo?.SubCategoria?.Nombre ?? "Sin SubCát.",
                     cantidad = d.CantidadRequerida,
